@@ -43,9 +43,11 @@ There are 10 assignments and a project. Some assignments will be individual, oth
 
 *[April 8](./Rmarkdown/makingfunctions2.Rmd)
 
+*[April 13](./Rmarkdown/makingfunctions3.Rmd)
+
 ### Data
 
-
+[sierraczosolar](./Data/sierraczosolar.rda)
 
 ### R files
 
@@ -56,6 +58,14 @@ There are 10 assignments and a project. Some assignments will be individual, oth
 [compute_diversity](./R/compute_diversity.R)
 
 [compute_simpson_index](./R/compute_simpson_index.R)
+
+[compute_profit](./R/compute_profit.R)
+
+[compute_profit_frompower](./R/compute_profit_frompower.R)
+
+[compute_NPV](./R/compute_NPV.R)
+
+[solarpv](./R/solarpv.R)
 
 ### Assignments
 
