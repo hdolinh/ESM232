@@ -1,0 +1,284 @@
+---
+title: "makingfunctions2"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+## Categorical Data
+
+Sometime we build models that use categorical data (for inputs and outputs)
+
+An example might be a model (or submodel) that computes a biodiversity index
+
+Simpson's Species Diversity
+
+[Simpson's Formula]
+http://www.countrysideinfo.co.uk/simpsons.htm]
+
+Lets go with the simpler first version
+
+Contract for the function?
+
+Inputs?
+Outputs?
+
+
+Lets go with actually a list of observations of different species
+( recorded with an app - clicked each time species is observed)
+
+R uses **factors** to deal with categorical data
+and **summary** to get counts (occurence of unique entities)
+
+```{r categorical}
+
+# example of using factors in R
+
+bugobs = c("butterfly","butterfly","mosquito","butterfly","ladybug","ladybug")
+# make it a factor
+bugobs = as.factor(bugobs)
+
+# get counts
+summary(bugobs)
+
+#access
+summary(bugobs)[1]
+summary(bugobs)[3]
+
+#these are values that you can manipulate
+summary(bugobs)[3]*10
+
+names(summary(bugobs)[3])
+
+# now try using this to create a function that computes Simpson's diversity
+
+```
+
+Implement Simpson's diversity as a function..
+
+## More on sampling
+
+Generating categorical data by sampling, what if we want to generate 'artifical'
+sampling for testing
+
+Usinging **sample**
+
+```{r catsampline, echo=TRUE, eval=TRUE}
+
+# read in model
+source("../R/compute_simpson_index.R")
+compute_simpson_index
+
+# use example from above
+bugobs
+compute_simpson_index(bugobs)
+
+
+
+
+
+# sampling categorical data
+# create possible values
+flower_types = c("iris","daisy","poppy","rose","dandelion","weed","violet")
+# sample (with replacement)
+garden = sample(flower_types, size=20, replace=T)
+
+compute_simpson_index(garden)
+
+# create test data for multiple gardens
+# using sapply
+# consider 5 different gardens
+
+# start by making a data structure that can store results
+# note that we add a column for simpson index even though we don't have values yet
+gardens = data.frame(site = seq(from=1, to=10), si=NA)
+
+gardens
+
+# create a sample and then compute index for each
+# show first using a for loop - then using sapply
+
+for (i in 1:nrow(gardens)) {
+  test_sample = sample(flower_types, size=20, replace=T)
+  indx = compute_simpson_index(test_sample)
+  # add results to the ith row of gardens index
+  gardens$si[i] = indx
+}
+gardens
+
+ggplot(gardens, aes(as.factor(site),si, fill=site))+geom_col()+labs(y="Simpson Diversity", x="Site")
+
+# if we wanted to keep the sample, consider making a second data frame
+nflowers=20
+gardens_detail = matrix(nrow=nflowers, ncol=nrow(gardens))
+colnames(gardens_detail)=gardens$site
+gardens_detail
+for (i in 1:nrow(gardens)) {
+  test_sample = sample(flower_types, size=nflowers, replace=T)
+  indx = compute_simpson_index(test_sample)
+  # add sample garden as the ith column
+  gardens_detail[,i] = test_sample
+  # add results to the ith row of gardens index
+  gardens$si[i] = indx
+}
+
+gardens_detail
+
+# an alternative (more efficient but less flexible) using sapply
+gardens$si = sapply(gardens$site, function (a) { test_sample=sample(flower_types, size=20, replace=T); return(compute_simpson_index(test_sample)) })
+
+```
+
+# Lists - For returning more than one item from your function
+
+*Lists are the most “informal” data structures in R
+*List are really useful for keeping track of and organizing groups of things that are not all the same
+*A list could be a table where number of rows is different for each column
+*A list can have numeric, character, factors all mixed together
+* List are often used for returning more complex information from function (e.g. lm)
+
+Here are some examples of how to create and manipulate lists
+
+```{r lists}
+# simple list
+sale =  list(number=c(2,4,9), quality="high", what="apple", cost=4)
+sale
+sale$cost
+sale$number
+sale[4]
+
+```
+
+Lists are used to return multiple values from functions
+<center>
+**return(list(....))**
+</center>
+
+Example: Lets build on our compute_simpson_index, but output some additional information - the most frequent species and the rarest species
+
+useful R
+recall for *factors* , *summary* gives you occurance for each unique factor
+
+we will also look at some other useful commands for lists
+
+* *lapply
+
+```{r usinglists}
+
+
+
+
+# use of summary with factos
+flower_types = c("iris","daisy","poppy","rose","dandelion","weed","violet")
+# sample (with replacement)
+garden = sample(flower_types, size=20, replace=T)
+
+# get frequencies
+summary(as.factor(garden))
+
+# find most frequent factor
+which.max(summary(as.factor(garden)))
+
+# get the label/name of least frequent factor
+names(which.min(summary(as.factor(garden))))
+
+
+# use these to inclue in our function and return more # information
+
+source("../R/compute_diversity.R")
+
+compute_diversity
+
+compute_simpson_index(garden)
+compute_diversity(garden)
+
+# modify to also output least frequent species and total number of unique speceis and add some error checking!
+
+# a bit more on using functions for multiple values
+# generate data for multiple gardens in multiple sites
+
+# with lists can mix arrays and single values
+site = c("A","B","C","D","E")
+
+# generate sample data
+nflowers=20
+garden_sample = sapply(site, function(x) {flowers = sample(flower_types, size=nflowers, replace=T); return(flowers)})
+
+# or with a for loop
+garden_sample = matrix(nrow=nflowers, ncol=length(site))
+for (j in 1:length(site)) {
+  garden_sample[,j] = sample(flower_types, size=nflowers, replace=T)
+}
+
+# now generate a data frame to store our results
+# recall for each garden we now have multiple things returned
+compute_diversity(garden_sample[,2])
+
+many_garden_result = data.frame(site = c("A","B","C","D","E"), simpson=NA, mostfreq=NA)
+many_garden_result
+for (i in 1:length(site)) {
+  tmp = compute_diversity(garden_sample[,i])
+  many_garden_result$simpson[i]=tmp$simpson
+  many_garden_result$mostfreq[i]=tmp$mostfreq
+}
+many_garden_result
+
+# alteratively - a bit cleaner but runs function twice
+for (i in 1:length(site)) {
+   many_garden_result$simpson[i]=compute_diversity(garden_sample[,i])$simpson
+  many_garden_result$mostfreq[i]=compute_diversity(garden_sample[,i])$mostfreq
+}
+
+  
+
+# we could also use apply to run our model over all of our sites
+# apply lets you run for each column
+# it will result in list
+# advantage is you don't need to define the data structure
+# disadvantage lists are hard to deal with
+many_gardens_result = apply(garden_sample, 2, function(x) {diversity= compute_diversity(x); return(diversity)})
+
+# organize list by columns and convert to dataframe
+many_gardens_sum = as.data.frame(matrix(unlist(many_gardens_result), ncol=2, byrow=T))
+colnames(many_gardens_sum)=c("simpson","mostfreq")
+# add site name
+many_gardens_sum$site = site
+
+
+#plot
+ggplot(many_gardens_sum, aes(site, simpson, fill=mostfreq))+geom_col()+labs(y="Simpson Index", x="Site")
+
+#try adding least frequent species and total number of species to the function
+
+```
+
+# Assignment 2
+
+Lobell et al (2006) present several empirical models that related yield of different California crops to climate variables.
+
+
+1. Implement a model of almond yield anomaly (difference from average) in R based on this paper; You will be graded both on the “correctness” of the implementation and on “style”.  Make sure you add some error checking. Use coefficients in the paper as default values, but make sure you can vary them. 
+
+2. Have the function return almond yield anomaly for each year, and max and minimum yields over a time series of multiple year inputs
+
+3. With the climate data provided (clim.txt), *use your model* to estimate how almond yield anomalies for each year in the record - graph the results.
+
+4. Use model to estimate  the mean annual yield anomaly if the last 20 years had been 2C warmer
+
+5. Vary one of the parameter by sampling from a normal distribution with mean the value from Lobell et al., (2006) and standard deviation 10% of the mean -  create a box plot of  mean annual yield anomaly for baseline and 2C climate (where boxes show variation due to uncertanty in the parameter) 
+
+Keep your function as a *.R file - and use an Rmarkdown document to show how you used your function to answer 3-5 
+Turn both the *.R file and the Rmarkdown document on guachospace
+
+Extra Credit - write a function that would make it easy to model ANY of the crops in Lobell 
+
+Turn in on Gauchospace - the .R function, that you used in the project (and to create the help pages) and a text file that gives your answers to questions
+
+Useful R command -group_by
+
+**Hint**
+clim_month = clim %>% group_by(month, year) %>% summarize(meantmax = mean(tmax_c), precip=sum(precip)) 
+gives average monthly maximum daily temperature, and monthly precipitation from a data frame called clim  with columns year, month, precip and tmax_c

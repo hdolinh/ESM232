@@ -1,0 +1,298 @@
+---
+title: "Making Functions"
+output: html_document
+---
+<style type="text/css"> body, td { font-size: 20px; } code.r{ font-size: 14px; } pre { font-size: 14px } </style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+
+```
+
+## Organizing your work
+
+* Store function definition in **R** subdirectory
+* Store  Rmarkdown in different subdirectory (**Rmarkdown**)
+* Set the scripts (**Rmarkdown**) as working directory
+* Use **source** to read the functions into your working directory
+
+```{r getfunctions}
+source("../R/power_gen.R")
+power_gen
+```
+
+```{r applyfunctions}
+
+# parameters are ordered
+power_gen(20,1)
+# uses 20 for height and 1 for flow
+power_gen(height=20, flow=1)
+
+# defaults are used, unless specified
+# consider a less efficient turbine
+power_gen(20,1, Keff=0.5)
+
+#how would you calculate power generation on Mars where
+# gravity is 10 time lighter
+
+# how about a high efficieny turbine with denser water (0.9 for efficiency; denser water 1200)
+
+
+# you can store the results of a function in a variable
+result_low = power_gen(20,1,Keff=0.2)
+result_high = power_gen(20,1,Keff=0.8)
+
+# now compute the difference in power between a high and low efficient turbine
+result_high-result_low
+```
+
+## Error Checking in Functions
+
+Think about what will your function do if user gives you garbage data
+
+Two options
+
+1. error-checking
+if temperature < -100 or > 100, or NA, output warning, particularly useful if you think that your function might be part of a *bigger* modeling project with many functions
+
+Imagine a model that has a function that takes the output of the power_gen function and uses it to compute ecosystem services associated with flow rates
+
+2. assume user reads the contract :)
+return unrealistic values
+so if input -999.0, will still try to output growth rate
+
+
+Error-checking is helpful if you are going to build a model made up of many functions- why?
+
+Adding Error Checking to our *Power Generation Function*
+
+
+```{r exampleserrorchecking}
+
+power_gen(-10,0.5)
+source("../R/power_gen_witherr.R")
+power_gen
+
+# example of error catch
+power_gen(-10,0.5)
+```
+
+## Warning (a good to know piece of info)
+
+Note that by *sourcing* a function - it will essentially overwrite anything else in your workspace with the same name 
+
+*Warning* - if you name your function, the same as an internal R function, your new function will take precidence, and **hide** the internal R function
+
+In R, functions are organized in **Packages**
+You've probably loaded different packages, that provide different functions
+There are a number of packages **base**, **stats** that are automatically loaded
+You can usually find the package associated with any function from online help
+
+* consider **runif** function in the **stats** package
+
+[runif help][https://stat.ethz.ch/R-manual/R-patched/library/stats/html/Uniform.html]
+
+To use a function associated with a particular package
+
+**package::function**
+
+This is helpful if you end up using functions with the same name as functions in other packages
+
+```{r  functionnaming}
+
+# consider runif an internal R function that returns 'n' random numbers between a minimum and maximum value
+runif(min=0, max=10, n=3)
+
+#what if I create my own function called runif
+
+runif = function(x,y) {
+  result=x**y
+  return(result)
+}
+#runif(min=0, max=10, n=3)
+
+runif(x=2,y=3)
+
+stats::runif(min=0,max=10, n=3)
+
+# if your remove your runif it will default back to core package 
+rm(runif)
+#runif(x=2,y=3)
+runif(min=0,max=10, n=3)
+```
+
+Try implementation of Okum's Law - add some error checking
+
+## Generating Data for your function
+
+You often want to apply your function to a range of data, that can come from
+
+* files you read in to R (measured height and flow rate values)
+* output from other functions/models 
+* data that you generate
+  * sensitivity analysis
+  * testing your model
+  * stochastic models
+
+***
+
+### Random Numbers as Inputs
+
+* sample from distributions (normal, uniform, poisson), which distribution depends on the model
+* R has many tools for generating samples from distributions with known parameters (such as mean, standard deviation, or min/max)
+  *  generating rainfall for a hydrologic model given know mean and variance of rainfall
+  
+* R also has tools for picking samples from collections 
+  * generating fish catches based on populations for an economic model
+  
+  
+  Others?
+***
+
+### Steps for running your model over multiple inputs
+1. design a data structure to store results: sometimes this is automatic but not always
+2. generate the input data
+3. apply to the model
+
+
+Example: Imagine we want to see how much power is generated given scenario where we know the mean and standard deviation of flow rates and heights for the reservoir,  we want to compute the distribution of power by running our power_gen model
+
+There are some useful R commands
+* mapply  (apply a function to all rows in a dataframe/matrix)
+* sapply  (apply a function to a vector (sequence of numbers))
+
+
+Lets say we know that heights come from a normal distribtuion with mean 10m and standard deviation of 1m
+And flow rates anywhere between 0.1 and 1
+
+```{r sampling}
+
+
+
+# Step 1  create data frame to store results 
+# how many simulations
+number_runs = 20
+
+#create a dataframe that has rows for each model run
+# columns for height, flowrate and power estimate
+reservoir_model_res= as.data.frame(matrix(nrow=number_runs, ncol=3))
+colnames(reservoir_model_res)=c("height","flowrate","power")
+
+
+# STep 2 - generate heights and flow rates
+reservoir_model_res$height = rnorm(mean=10, sd=1, n=number_runs)
+reservoir_model_res$flowrate = runif(min=0.1, max=1, n=number_runs)
+
+# Step 3 - apply model to get power for each height, flow rate
+reservoir_model_res$power = mapply(FUN=power_gen, height=reservoir_model_res$height, flow=reservoir_model_res$flowrate)
+
+# Always graph results to make sure they make sense
+#View(reservoir_model_res)
+ggplot(reservoir_model_res, aes(flowrate, power))+geom_point()+labs(x="Flow Rate m3/s", y="Power (W/s)")
+
+
+                                  
+```
+ 
+We might also want to compute for a range of efficiencies
+
+Say for 0.1 to 0.8 in steps
+
+This gets a bit more complicated - what if we want to look at our 20 samples of flow rate and height for EACH reservoir efficieny
+
+
+We can use sapply
+We also take advantage of a 'inline' function definition that allows use to run multiple steps for each value in the sequence
+
+Syntax is
+sapply(sequence, function, parameters)  
+
+OR to define a couple of steps on the fly
+
+sapply(sequence, function(parms) {definition})
+
+See example below
+
+```{r sampling2}
+
+# create a sequence of efficienies
+Keff = seq(from=0.1, to=0.8, by=0.1)
+length(Keff)
+
+# create a data structure - now we have to have one for each Keff
+#reservoir_model_resK= as.data.frame(matrix(nrow=number_runs*length(Keff), ncol=3))
+#colnames(reservoir_model_res)=c("height","flowrate","power")
+
+# use sapply to run for each value of Keff
+# sapply works like mapply but runs for every value in a sequence
+# we still use mapply to run all heights and flowrates for each Keff
+
+
+res = sapply(Keff, function(K) {tmp =mapply(FUN=power_gen, height=reservoir_model_res$height, flow=reservoir_model_res$flowrate, Keff=K); return(tmp)})
+
+head(res)
+# turn it into a data frame to support adding colums
+res = as.data.frame(res)
+
+# rearrange to plot
+colnames(res)=Keff
+resg=as.data.frame(res) %>% gather(Keff, power)
+ggplot(resg, aes(Keff, power, fill=Keff))+geom_boxplot() + labs(y="Power (W/s)", "Efficiency")
+
+# note that we still have all of the heights and flow rates
+# we could combine them
+
+
+      
+```
+
+
+Often in running models - we have this situation where we are going to run across multiple inputs and parameters
+
+Think creatively about data structures to store results
+
+If there are too many dimensions (things that vary), can be useful to define a scenario
+and give it a unique ID
+
+There are some good R tools for this
+
+** gather **  to collapse dimensions into labels and values
+** inner_join ** to link datasets together by ID
+
+
+
+```{r scen}
+
+head(reservoir_model_res)
+
+reservoir_model_res$scen= seq(from=1, to=nrow(reservoir_model_res))
+res$scen = seq(from=1, to=nrow(reservoir_model_res))
+
+head(reservoir_model_res)
+head(res)
+
+# now combine into a long dataset
+# the -scen means don't use it in the gathering
+resg=as.data.frame(res) %>% gather(Keff, power, -scen)
+
+# now we can join with original reservoire results
+# the original dataset had a default power column so we will add suffixes to account for that
+
+# we use left_join and the resg as the left object because there are 'more' of them - one for each Keff
+all_res = left_join(resg, reservoir_model_res, by="scen", suffix=c("",".default"))
+
+```
+
+
+Homework - Not graded
+
+
+Try repeating for a different reservoir with heights come from a normal distribtuion with mean 5m and standard deviation of 0.2 m
+And flow rates that are sampled from a normal distribution mean 1m/s and standard deviation 0.01
+And then apply with Keff sampled from a uniform distribution
+
+Save results to a different variable e.g all_res2 and all_res
+That way you can compare them
+
+
