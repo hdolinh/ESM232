@@ -213,11 +213,16 @@ for (j in 1:length(site)) {
   garden_sample[,j] = sample(flower_types, size=nflowers, replace=T)
 }
 
-# now generate a data frame to store our results
-# recall for each garden we now have multiple things returned
+# example application of our function to a specific garden
 compute_diversity(garden_sample[,2])
 
+# now generate a data frame to store our results for all gardens
+# recall for each garden we now have multiple things returned
+# a) the simpson index and b) the most frequent species
+
+
 many_garden_result = data.frame(site = c("A","B","C","D","E"), simpson=NA, mostfreq=NA)
+
 many_garden_result
 for (i in 1:length(site)) {
   tmp = compute_diversity(garden_sample[,i])
@@ -232,17 +237,30 @@ for (i in 1:length(site)) {
   many_garden_result$mostfreq[i]=compute_diversity(garden_sample[,i])$mostfreq
 }
 
-  
+head(many_garden_result)
+ggplot(many_garden_result, aes(site, simpson, fill=mostfreq))+geom_col()
 
 # we could also use apply to run our model over all of our sites
 # apply lets you run for each column
 # it will result in list
 # advantage is you don't need to define the data structure
 # disadvantage lists are hard to deal with
-many_gardens_result = apply(garden_sample, 2, function(x) {diversity= compute_diversity(x); return(diversity)})
 
+many_gardens_result_aslist = apply(garden_sample, 2, function(x) {diversity= compute_diversity(x); return(diversity)})
+
+head(many_gardens_result_aslist)
+
+# look at an individual garden (element of list)
+many_gardens_result_aslist[3]
+# all named items
+lapply(many_gardens_result_aslist,"[", c("simpson"))
+
+# often easier to get it out of list format
 # organize list by columns and convert to dataframe
-many_gardens_sum = as.data.frame(matrix(unlist(many_gardens_result), ncol=2, byrow=T))
+many_gardens_result_aslist[1]
+# note that each element of the list has 2 items- so store as a matrix with 2 columns one for each item - and use unlist to extract
+
+many_gardens_sum = as.data.frame(matrix(unlist(many_gardens_result_aslist), ncol=2, byrow=T))
 colnames(many_gardens_sum)=c("simpson","mostfreq")
 # add site name
 many_gardens_sum$site = site

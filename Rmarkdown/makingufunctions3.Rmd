@@ -14,7 +14,7 @@ Parameters in the function definition can be used to give users options that det
 
 This allows functions to be more flexible
 
-Think of a model of ecosystem production that change calculations if vegetation is grass versus a tree
+Think of a model of ecosystem production that changes calculations if vegetation is grass versus a tree
 
 
 Built in R functions do this alot - they allow users to specify methods (**glm** for example, alows family to set the type of model - binomical or gaussian) 
@@ -38,7 +38,7 @@ solarpv
 # read in R formatted data
 load("../Data/sierraczosolar.rda")
 
-# already in the formal required for the model
+# already in the format required for the model
 head(sierraczosolar)
 
 # run the model
@@ -67,8 +67,15 @@ Functions can always embed other functions - and in models the output of one mod
 * loosely coupled models - output from one becomes input the other - but not necessarily automatic
 * fully coupled - models exchange input sna outputs (feedback systems)
 
+Develop a conceptual model
 
-As an example, compute net present value of power facility
+```{r  out.width="75%", out.height="75%", echo=FALSE }
+library(knitr)
+include_graphics("./power_comparison_figure.jpeg",) 
+```
+
+
+To start - lets create what we need to compute net present value of power facility
 We will use output from our solarpv function as input into a function that
 estimate profit given a price - and also 'calls' another function to compute 
 net present value
@@ -82,23 +89,33 @@ compute_profit_frompower
 
 compute_NPV
 
-# use site1 from above as input
+# use solar from  site1 from above as input
 
 profit_solar = compute_profit_frompower(energy=site1$annual$elect, price=30, discount=0.04)
 profit_solar
 
-ggplot(profit_solar$yearprofit, aes(year, netpre))+geom_col()+labs(y="Profit in current $", x="time")
+ggplot(profit_solar$yearprofit, aes(year, netpre))+geom_col()+labs(y="Profit in current $", x="year")
 
-# notice that the first
+# notice that by graphing we identify an issue with the first year
+# thoughts on what it might be
 ```
 
 Notice that we can 're-use' our function - combining it with
 other sources of power data
-(such as our reservoir power model)
+(such as our reservoir power model) to build out our complete model
 
 ```{r reuse}
 
 # rerun 'sampling' in makingfunction1.Rmd. above to get results from our reserovir model
+source("../R/power_gen.R")
+number_runs = length(profit_solar$year)
+reservoir_model_res= as.data.frame(matrix(nrow=number_runs, ncol=3))
+colnames(reservoir_model_res)=c("height","flowrate","power")
+# STep 2 - generate heights and flow rates
+reservoir_model_res$height = rnorm(mean=10, sd=1, n=number_runs)
+reservoir_model_res$flowrate = runif(min=0.1, max=1, n=number_runs)
+# Step 3 - apply model to get power for each height, flow rate
+reservoir_model_res$power = mapply(FUN=power_gen, height=reservoir_model_res$height, flow=reservoir_model_res$flowrate)
 head(reservoir_model_res)
 
 # create profit from hydro
