@@ -37,6 +37,9 @@ There are 10 assignments and a project. Some assignments will be individual, oth
 
 *[Building Models](./Lectures/lecture3.buildingmodels.pdf)
 
+*[Sensitivity](./Lectures/sensitivity.analysis.pdf)
+
+
 ### Rmarkdown   
 
 *[April 6](./Rmarkdown/makingfunctions1.Rmd)
@@ -45,9 +48,13 @@ There are 10 assignments and a project. Some assignments will be individual, oth
 
 *[April 13](./Rmarkdown/makingfunctions3.Rmd)
 
+*[April 20](./Rmarkdown/sensitivity.Rmd)
+
 ### Data
 
 [sierraczosolar](./Data/sierraczosolar.rda)
+
+[clim](./Data/clim.txt)
 
 ### R files
 
@@ -66,6 +73,9 @@ There are 10 assignments and a project. Some assignments will be individual, oth
 [compute_NPV](./R/compute_NPV.R)
 
 [solarpv](./R/solarpv.R)
+
+[almond](./R/almond.R)
+
 
 ### Assignments
 
