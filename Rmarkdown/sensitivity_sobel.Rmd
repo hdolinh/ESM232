@@ -1,0 +1,98 @@
+---
+title: "Sensitivity_sobel"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(sensitivity)
+library(tidyverse)
+library(gridExtra)
+```
+
+## Sobel
+
+Sobel sensitivity analysis is similar to LHS approach 
+Breaks variance of output into 
+
+* variance associated directly with parameter alone (fraction associated with each parameter, sum to 1)
+* variance associated with parameter and interaction with other parameters (sum can be more than 1)
+
+
+Similar workflow to LHS
+
+* run sobel to get parameter sets in a sensitivity analysis object
+* run model with those parameter sets
+* tell the senstivity object about results associated with each parameter set
+* look at sensitivity analysis metric from sobel
+
+Start with simple example - almond yield
+```{r sobel}
+source("../R/power_gen.R")
+power_gen
+
+# lets look at sensitivity to Keff and flow rate assuming a reservoir height of 10m
+height=10
+
+# flow rates are from a uniform distribution
+# efficiency from a normal distribution
+
+# set number of parameter sets
+np = 1000
+
+# generate two examples of random number from parmeter distributions
+flow_rate_example1 = runif(min=10, max=20, n=np)
+flow_rate_example2 = runif(min=10, max=20, n=np)
+Keff_example1 = rnorm(mean=0.3, sd=0.01, n=np)
+Keff_example2 = rnorm(mean=0.3, sd=0.01, n=np)
+
+X1 = cbind.data.frame(flow_rate=flow_rate_example1, Keff=Keff_example1)
+X2 = cbind.data.frame(flow_rate=flow_rate_example2, Keff=Keff_example2)
+
+sen_power <- sobol2007(model = NULL, X1, X2, nboot = 100)
+
+# this is a quasi random sequence - fills the space with little discrepancy
+# less clumped than an actual random sequence
+# more efficient
+
+head(sen_power$X)
+
+# run model for all parameter sets
+res = mapply(power_gen, flow=sen_power$X$flow_rate, height=10, Keff=sen_power$X$Keff)
+
+# give results to sensitivity analysis object
+sen_power = tell(sen_power,res)
+
+# first-order indices (main effect without co-variance)
+sen_power$S
+# total sensitivity index
+sen_power$T
+
+print(sen_power)
+plot(sen_power)
+
+# other plots you can generate by extracting from sensitivity object
+tmp = cbind.data.frame(sen_power$X, power=sen_power$y)
+p1 = ggplot(tmp, aes(flow_rate, power))+geom_point()+labs(y="Power", x="Flow rate")
+p2 = ggplot(tmp, aes(Keff, power))+geom_point()+labs(y="Power", x="Keff")
+p3 = ggplot(tmp, aes(power))+stat_ecdf()
+grid.arrange(p1,p2,p3)
+```
+
+
+# Assignment
+
+
+Adjust your almond model to  output ONLY the mean almond yield anomoly IF the users sets parameter (e.g mean_only = TRUE))
+
+Perform a sensitivity analysis of how mean anomaly varies ALL of the parameters used in the yield model  
+Assume parameters are normally distribute with standard deviation of 20% mean value
+
+Rank the parameters in term of their sensitivity
+Graph uncertainty in mean yield anomaly across all parameter uncertainty (boxplot and cummulative distribution of the output).
+
+Repeat using the LHS and Sobel methods
+
+Repeat using twice as many parameter sets as you did in your first sensitivity analysis - and look at how this changes the sensitivity results
+
+Submit R markdown and short write up describing what you learned from the sensitivity analysis
