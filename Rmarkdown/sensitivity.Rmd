@@ -9,7 +9,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(sensitivity)
 library(tidyverse)
 library(pse)
-library(deSolve)
+
 ```
 
 ## Example of using LHS for sensitivity analysis
@@ -28,7 +28,7 @@ source("../R/almond.R")
 factors = c("Tmincoeff1", "Tmincoeff2")
 
 # Decide How many parameter sets to run
-nsets=100
+nsets=500
 
 # choose distributions for parameters - 
 q = c("qnorm", "qnorm")
@@ -50,9 +50,9 @@ clim= SB
 
 # note our use of unlist here to extract the results we need
 # try this with > 500 parameter sets - will take time
-#for (i in 1:nsets) {
-#  sens_results[i,] = unlist(almond(clim=clim,Tmincoeff1=sens_pars[i,1], Tmincoeff2=sens_pars[i,2]))
-#}
+for (i in 1:nsets) {
+  sens_results[i,] = unlist(almond(clim=clim,Tmincoeff1=sens_pars[i,1], Tmincoeff2=sens_pars[i,2]))
+}
 
 # this will be much faster
 # notice that MoreArgs is used for inputs that are the same for each set
@@ -79,7 +79,7 @@ ggplot(sens_results, aes(minyield, maxyield))+geom_point()+labs(y="Max Yield (as
 
 
 # add uncertainty bounds on our estimates
-tmp = sen_results %>% gather(value="value", key="yield")
+tmp = sens_results %>% gather(value="value", key="yield")
 ggplot(tmp, aes(yield, value, col=yield))+geom_boxplot()+labs(y="Yield (as anomoly)")
 
 # notice the difference
