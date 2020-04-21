@@ -15,6 +15,8 @@ Another example
 
 Atmospheric Conductance as a function of windspeed, vegetation height and parameters
 
+![Catm](./Catm_fig.jpeg)
+
 ```{r setsen, echo=TRUE, eval=TRUE}
 
 source("../R/Catm.R")
@@ -58,9 +60,9 @@ We can then use two plotting commands
 
 # run the model
 source("../R/Catm.R")
-sens.res = Catm(v=sens.pars$v, height=sens.pars$height, zm=30, mult_zo=sens.pars$mult_zo, mult_zd=sens.pars$mult_zd)
+sens_res = Catm(v=sens.pars$v, height=sens.pars$height, zm=30, mult_zo=sens.pars$mult_zo, mult_zd=sens.pars$mult_zd)
 
-sens_Catm = tell(sens_Catm, sens.res, res.names="ga")
+sens_Catm = tell(sens_Catm, sens_res, res.names="ga")
 plotscatter(sens_Catm)
 
 # note it can take standard R plotting parameters
@@ -104,8 +106,9 @@ Atmospheric Conductance as a function of windspeed, vegetation height and parame
 
 source("../R/Catm.R")
 # names of our parameters
-factors = c("mult_zo","mult_zd", "v","height")
+# number of parameters 
 
+np=500
 mult_zo = rnorm(mean=0.1,sd=0.01, n=np)
 mult_zd = runif(min=0.6,max=0.8, n=np)
 v = rnorm(mean=5, sd=1, n=np)
