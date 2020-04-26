@@ -1,0 +1,213 @@
+---
+title: "SimpleDynamicModels"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+
+Some code to look at simple population growth models as
+dynamic models where
+* explicit solution to differential equation is known
+* must be solved by iteration
+
+
+```{r explicit}
+source("../R/exppop.R")
+
+# gives population after any time given an initial population
+
+# 20 rabbits, growth rate of 0.01 how many in 30 years
+exppop(T=30, P0=20, r=0.01, K=1000)
+
+# if we want to see how populatin evolves over time - generate a time series 
+
+initialrabbits = 20
+years = seq(from=1, to=100, by=2)
+Ptime = sapply(years, exppop, P0=initialrabbits, r=0.01, K=1000)
+# keep track of what times we ran
+Ptime = data.frame(P=Ptime, years=years)
+
+ggplot(Ptime, aes(years,P))+geom_point()+labs(x="years",y="Rabbit Population")
+
+# try generating results for maximum and minimum possible r values to compare (guess at what you think)
+max_r = 0.1
+min_r = 0.01
+K = 1000
+
+tmp = sapply(years, exppop, r=max_r, P0=initialrabbits, K=K)
+Ptime$Pmaxr = tmp
+tmp = sapply(years, exppop, r=min_r, P0=initialrabbits, K=K)
+Ptime$Pminr = tmp
+
+head(Ptime)
+Ptimep = Ptime %>% gather(key="r",value="P",-years)
+ggplot(Ptimep, aes(years,P, col=r))+geom_point()+labs(x="years",y="Rabbit Population")
+
+# notice how populatin becomes unstable for high growth rates! 
+
+
+```
+
+Using a solver....when you can't do the integration by hand :)
+Implement the differential equation as a function that
+
+*returns the derivative (as a list)
+*inputs time, the variable(s) and a parameter list
+
+(it needs time even though you don’t use it)
+
+I name them starting with *d* to remind myself that they
+are computing a derivative
+
+
+```{r odeexample, echo=FALSE}
+
+source("../R/dexppop.R")
+
+# see how it works
+dexppop(P=20, r=0.01)
+
+
+#what is this?
+
+# notices this is the same as
+dexppop(t=100,P=20, r=0.01)
+
+# what is "tmp" below
+pops = seq(from=1, to=100)
+tmp = sapply(pops, dexppop, time=0,r=0.01)
+pchange = unlist(tmp)
+
+pdyn = data.frame(pops, pchange)
+ggplot(pdyn, aes(pops, pchange))+geom_point(col="green", size=1.5)
+
+
+# why is this a straight line?
+# how many new individuals are born at each population level
+
+
+# add a carrying capacity to this function
+# how do we connect those?
+# iterate the differential equation....using R's solver
+```
+
+R has a solver called *ODE* for solving ordinary differential equations
+frome package **desolve**
+
+*ODE* requires
+
+* initial conditions
+* values of independent where we want values of dependent variable (e.g times where we want population)
+* the derivative as a function
+* a list that contains alll  parameter values (or if you have only one parameter then you can use a single value)
+
+```{r usingode}
+
+
+source("../R/dexppop.R")
+library(deSolve)
+initialrabbits = 20
+years = seq(from=1, to=100, by=2)
+
+# run the solver
+Ptime = ode(y=initialrabbits, times=years, func=dexppop,parms=c(0.01))
+head(Ptime)
+colnames(Ptime)=c("year","P")
+
+# notice that there are additional pieces of information year, including the method used for integration
+attributes(Ptime)
+
+# this also means you need to extract just the data frame for plotting
+ggplot(as.data.frame(Ptime), aes(year,P))+geom_point()+labs(y="Population", "years")
+
+# this also works (of course function can be by order)
+Ptime=ode(initialrabbits, years, dexppop,0.03)
+colnames(Ptime)=c("year","P")
+ggplot(as.data.frame(Ptime), aes(year,P))+geom_point()+labs(y="Population", "years")
+
+# how would we add carrying capacity here
+
+```
+
+
+You can play a bit with changing your function to something that you can't integrate "by hand"
+
+BUT we might want more parameters
+
+to work with ODE,
+parmeters must all be input as a single list; simlar to how we return multiple outputs from a function
+
+see example below..lets imagine that there is some external force that slowly increases population growth rates for the first hundred years - and also adds a maximum population value
+
+
+```{r}
+
+# define function
+dexppop_play = function(time, P, parms) {
+  
+  add = ifelse(time < parms$maxtime, 0.001*time, 0.001*parms$maxtime)
+   growth_rate = parms$r+add
+  dexpop = growth_rate*P
+  dexpop = ifelse(P > parms$maxP, 0, dexpop)
+  return(list(dexpop))
+}
+
+# create parameter list
+newparms = list(r=0.03, maxtime=50, maxP=300)
+
+#apply solver
+results=ode(initialrabbits, years, dexppop_play,newparms)
+
+# look at results
+head(results)
+colnames(results)=c("year","Pnew")
+ggplot(as.data.frame(results), aes(year,Pnew))+geom_point()+labs(y="Population", "years")
+
+# compare
+both = left_join(as.data.frame(Ptime), as.data.frame(results), by="year")
+both_p = both %>% gather(key="model", value="P", -year)
+ggplot(both_p, aes(year,P, col=model))+geom_point()+labs(y="Population", "years")
+
+# try playing on your own - modiffy the function in some way
+```
+
+
+Now for partial derivatives - time and space! it gets much more tricky ...beyond this course 
+
+Example of Diffusion - difference equation implementation to see what some issues can be
+
+
+```{r}
+
+source("../R/diffusion.R")
+result = diff1(initialC=10, nx=10, dx=1, nt=8, dt=1, D=0.5, area=10)
+
+result
+
+# used filled contour to plot results
+head(result$conc)
+filled.contour(result$conc, xlab="Time", ylab="Distance")
+
+# changes diffusivity and other parameters particularly
+# diffusivity, dx and dt
+res=diff1(initialC=10,nx=10,dx=1,nt=10,dt=30,D=0.006,area=1)
+
+filled.contour(res$conc, xlab="Time", ylab="Distance")
+
+filled.contour(res$qin, xlab="Time", ylab="Distance")
+
+# play with time step, space step and parameters
+
+
+```
+
+```{r}
+
+# Discretization Issue Example
+filled.contour(diff1(10,10,1,10,30,0.6,1)$conc, xlab="time",ylab="Distance Along Path")
+```
+

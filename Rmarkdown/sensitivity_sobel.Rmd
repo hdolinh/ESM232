@@ -108,7 +108,7 @@ source("../R/Catm.R")
 # names of our parameters
 # number of parameters 
 
-np=500
+np=10000
 mult_zo = rnorm(mean=0.1,sd=0.01, n=np)
 mult_zd = runif(min=0.6,max=0.8, n=np)
 v = rnorm(mean=5, sd=1, n=np)
