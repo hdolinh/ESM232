@@ -146,15 +146,17 @@ see example below..lets imagine that there is some external force that slowly in
 
 ```{r}
 
+
 # define function
 dexppop_play = function(time, P, parms) {
   
-  add = ifelse(time < parms$maxtime, 0.001*time, 0.001*parms$maxtime)
+   add = ifelse(time < parms$maxtime, 0.001*time, 0.001*parms$maxtime)
    growth_rate = parms$r+add
   dexpop = growth_rate*P
   dexpop = ifelse(P > parms$maxP, 0, dexpop)
   return(list(dexpop))
 }
+source("../R/exppop_play.R")
 
 # create parameter list
 newparms = list(r=0.03, maxtime=50, maxP=300)
