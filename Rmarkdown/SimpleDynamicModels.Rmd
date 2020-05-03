@@ -159,15 +159,19 @@ dexppop_play = function(time, P, parms) {
 source("../R/exppop_play.R")
 
 # create parameter list
-newparms = list(r=0.03, maxtime=50, maxP=300)
+newparms = list(r=0.03, maxtime=50, carry_capacity=300)
 
 #apply solver
 results=ode(initialrabbits, years, dexppop_play,newparms)
 
+alternativeparms = list(r=0.04, maxtime=20, carry_capacity=500)
+results2=ode(initialrabbits, years, dexppop_play,alternativeparms)
+
+initalrabbits=2
 # look at results
 head(results)
-colnames(results)=c("year","Pnew")
-ggplot(as.data.frame(results), aes(year,Pnew))+geom_point()+labs(y="Population", "years")
+colnames(results2)=c("year","Pnew")
+ggplot(as.data.frame(results2), aes(year,Pnew))+geom_point()+labs(y="Population", "years")
 
 # compare
 both = left_join(as.data.frame(Ptime), as.data.frame(results), by="year")
@@ -175,41 +179,5 @@ both_p = both %>% gather(key="model", value="P", -year)
 ggplot(both_p, aes(year,P, col=model))+geom_point()+labs(y="Population", "years")
 
 # try playing on your own - modiffy the function in some way
-```
-
-
-Now for partial derivatives - time and space! it gets much more tricky ...beyond this course 
-
-Example of Diffusion - difference equation implementation to see what some issues can be
-
-
-```{r}
-
-source("../R/diffusion.R")
-result = diff1(initialC=10, nx=10, dx=1, nt=8, dt=1, D=0.5, area=10)
-
-result
-
-# used filled contour to plot results
-head(result$conc)
-filled.contour(result$conc, xlab="Time", ylab="Distance")
-
-# changes diffusivity and other parameters particularly
-# diffusivity, dx and dt
-res=diff1(initialC=10,nx=10,dx=1,nt=10,dt=30,D=0.006,area=1)
-
-filled.contour(res$conc, xlab="Time", ylab="Distance")
-
-filled.contour(res$qin, xlab="Time", ylab="Distance")
-
-# play with time step, space step and parameters
-
-
-```
-
-```{r}
-
-# Discretization Issue Example
-filled.contour(diff1(10,10,1,10,30,0.6,1)$conc, xlab="time",ylab="Distance Along Path")
 ```
 
