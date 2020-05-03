@@ -6,9 +6,13 @@
 #' @return population after T
 
 discrete_logistic_pop = function(P0,r,K, T=10) {
-	pop=P0
+	# set initial population
+  pop=P0
+  
+  # recalculate population for each time step
 	for (i in 1:T) {
-	pop = pop + r*(1-pop/K)*pop
+	pop = pop + r*pop
+	pop = ifelse(pop > K, K, pop)
 	}
 	return(pop)
 }

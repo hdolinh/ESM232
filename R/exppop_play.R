@@ -7,8 +7,10 @@
 #'
 dexppop_play = function(time, P, parms) {
   
-  
+  # compute rate of change of population
   dexpop = parms$r*P
+  
+  # set rate of change to 0 if P is greater than carrying capacity
   dexpop = ifelse(P > parms$K, 0, dexpop)
   return(list(dexpop))
 }
