@@ -287,7 +287,7 @@ plot(sens_P_maxyear)
 Assignment
 
 
-Consider the following model of forest growth
+Consider the following model of forest growth (where forest size in measured in units of carbon (C))
 
 dC/dt = 0 when air temperatures are below 0
 
@@ -303,7 +303,7 @@ The size of the forest (C), Canopy closure threshold and carrying capacity are a
 
 You could think of the canopy closure threshold as the size of the forest at which growth rates change from exponential to linear
 
-You can think of r, as early exponential growth rate and g and the linear growth rate 
+You can think of r, as early exponential growth rate and g as the linear growth rate 
 
 
 1. Implement this model in R (as a differential equation)
