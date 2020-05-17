@@ -1,0 +1,191 @@
+---
+title: "stability"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(deSolve)
+```
+
+
+
+# Another Application
+
+Modeling carbon growth in a forest
+
+r is growth rate
+K is maximum carbon capacity of the forest
+
+```{r forest}
+source("../R/dpopgrowth.R")
+
+# set parameters
+forestparms = list(K=100,r=0.2)
+
+# create a time sequence
+tm = seq(from=1,to=100)
+
+# start a small forest
+postfire_initial_carbon = 2
+
+# watch it grow
+forest = ode(y=postfire_initial_carbon, times=tm, dpopgrowth, parms=forestparms)
+
+colnames(forest)=c("time","carbon")
+ggplot(as.data.frame(forest),aes(time, carbon) )+geom_line()
+
+
+```
+
+Now lets add disturbance
+
+# Disturbance
+
+harvest the forest 
+2 options
+*a fixed harvest every year
+*proportional harvest (% of current stock)
+
+```{r harvest}
+
+# fixed amount per year
+source("../R/dharvest.R")
+
+# try it out
+tm = seq(from=1, to=500)
+Pinitial = 1
+gps = list(harv=0.18, K=100, r=0.2)
+res = ode(Pinitial,tm, dharvest, gps)
+colnames(res)=c("time","carbon")
+
+ggplot(as.data.frame(res), aes(time, carbon))+geom_point()
+
+# lets vary the harvest rates from 0.0 to 0.4
+harvestr = seq(from=0.0, to=0.4, by=0.025)
+
+# save all of the trajectories
+# rows are time, columns are carbon for each harvest scenario
+carbon = matrix(nrow=length(tm), cnol=length(harvestr))
+
+# use a wrapper function to just return the carbon trajectories
+getcarbon = function(Pinitial, tm, harv, K, r, hfunc) {
+  gps = list(harv=harv, K=K, r=r)
+  res = ode(Pinitial,tm, hfunc, gps)
+  colnames(res)=c("time","carbon")
+  res=as.data.frame(res)
+  return(carbon=res$carbon)
+}
+
+# apply this function to all harvest values
+res = sapply(harvestr, getcarbon, Pinitial=Pinitial, tm=tm, K=100, r=0.2, hfun=dharvest)
+colnames(res)=harvestr
+res=as.data.frame(res)
+res$time=tm
+# put in to a form where we can plot
+resl = gather(res, key="harvestr",value="carbon", -time)
+ggplot(resl,aes(time, carbon, col=harvestr))+geom_line()
+
+```
+
+Try different harvest rates...notice how carbon growth changes...what does stability mean - can you find parameter sets that lead to a stable forest
+
+
+Change to make harvest a fixed amount of  carbon but only take it if it is above a threshold minimum carbon
+
+```{r stability}
+
+source("../R/dharvestfixed.R")
+
+# try it out
+tm = seq(from=1, to=500)
+Pinitial = 500
+gps = list(harv=0.015, K=1000, r=0.05, mincarbon=20)
+
+res = ode(Pinitial,tm, dharvestfixed, gps)
+colnames(res)=c("time","carbon")
+
+ggplot(as.data.frame(res), aes(time, carbon))+geom_point()
+
+#  try a different solver
+res = ode(Pinitial,tm, dharvestfixed, gps, method="euler")
+colnames(res)=c("time","carbon")
+
+ggplot(as.data.frame(res), aes(time, carbon))+geom_line()
+
+
+```
+
+
+A useful analysis can be to look at where the system state is stable (no change in state)
+
+We can look at how the derivative (rate of change varies)
+
+```{r stability2}
+
+# given some forest characteristics
+lowHrate = 0.015
+gps = list(harv=lowHrate, K=100, r=0.05, mincarbon=20)
+
+# look at the derivative over a range of forest sizes
+
+findstable = data.frame(Ccurr=seq(from=1, to=100, by=5))
+# notice use of Time=NULL
+findstable$dervHlow = unlist(sapply(findstable$Ccurr, dharvest, parm=gps, Time=NULL))
+
+ggplot(findstable, aes(Ccurr, dervHlow))+geom_point()+geom_hline(yintercept = 0, col="red")
+
+# Populations will be stable when derivative is zero!
+
+# look at a different harvest rate
+midHrate=0.02
+gps = list(harv=midHrate, K=100, r=0.05, mincarbon=20)
+findstable$dervHmid = unlist(sapply(findstable$Ccurr, dharvest, parm=gps, Time=NULL))
+
+tmp = gather(findstable, key="H", value="value", -Ccurr)
+ggplot(tmp, aes(Ccurr, value, color=H))+geom_point()+geom_hline(yintercept = 0, col="black")
+
+# try high rate
+highHrate=0.03
+gps = list(harv=highHrate, K=100, r=0.05, mincarbon=20)
+findstable$dervHhigh = unlist(sapply(findstable$Ccurr, dharvest, parm=gps, Time=NULL))
+tmp = gather(findstable, key="H", value="value", -Ccurr)
+ggplot(tmp, aes(Ccurr, value, color=H))+geom_point()+geom_hline(yintercept = 0, col="black")+
+  labs(x="Forest Biomass", y="Change Rate")
+
+# notice how with higher harvest rates the stable population will be lower
+
+
+
+
+```
+
+knowing the stability can help you understand the dynamics ofthe system
+
+If we start with a Forest Carbon of 50 and low harvest rate what will happen
+
+If we start with a Forest Carbon of 50 and a high harvest rate what will happen
+
+Try it to find out if you are right
+```{r}
+
+gps = list(harv=lowHrate, K=100, r=0.05, mincarbon=20)
+Pinitial=50
+res = ode(Pinitial,tm, dharvest, gps)
+colnames(res)=c("time","carbon")
+ggplot(as.data.frame(res), aes(time, carbon))+geom_point()
+
+
+gps = list(harv=highHrate, K=100, r=0.05, mincarbon=20)
+Pinitial=50
+res = ode(Pinitial,tm, dharvest, gps)
+colnames(res)=c("time","carbon")
+ggplot(as.data.frame(res), aes(time, carbon))+geom_point()
+
+
+
+```
+
+
+We can more formally find stablity by finding when the derviative of the function is zero
