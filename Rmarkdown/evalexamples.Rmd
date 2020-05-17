@@ -65,7 +65,7 @@ compute_lowflowmetrics(m=sager$model,o=sager$obs, month=sager$month, day=sager$d
 
 
 
-# consider relationships with 
+# try another metric
 ```
 
 Peformance evaluation  may depend on what parameter set you use
