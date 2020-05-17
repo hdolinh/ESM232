@@ -22,7 +22,7 @@ Predictor Prey -
 source("../R/lotvmod.R")
 
 # initial conditions
-currpop = c(prey=1, pred=1)
+currpop = c(prey=10, pred=1)
 
 # time points to see results
 days = seq(from=1, to=100, by=1)
@@ -82,7 +82,7 @@ p1=ggplot(ressimple, aes(time, pop, col=animal))+geom_line()
 p1
 
 # also look at relationships between preditor and prey population and use color for time
-p2 = ggplot(as.data.frame(res), aes(pred, prey, col=as.factor(round(time/10))))+geom_point()+theme(legend.position="none")
+p2 = ggplot(as.data.frame(res), aes(pred, prey, col=as.factor(round(time/10))))+geom_point()
 p2
 
 grid.arrange(p1,p2)
@@ -141,7 +141,7 @@ return(list(maxprey=maxprey, minprey=minprey, maxpred=maxpred, minpred=minpred))
 
 p_wrapper = function(rprey,alpha, eff, pmort, K, currpop, days, func) {
     parms = list(rprey=rprey, alpha=alpha, eff=eff, pmort=pmort, K=K)
-    result = ode(y=currpop, times=days, func=lotvmodK, parms=parms) 
+    result = ode(y=currpop, times=days, func=func, parms=parms) 
     colnames(result)=c("time","prey","pred")
   # get metrics
   metrics=compute_metrics(as.data.frame(result))
