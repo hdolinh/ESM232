@@ -100,7 +100,7 @@ source("../R/evolve_pop.R")
 F1 = 0.0
 F2 = 0.25/2
 F3 = 0.5/2
-F4 = 0.25/25
+F4 = 0.25/2
 
 # survivability - based on mortality rates per thousand per decade
 p12 = 1-79/1000 
