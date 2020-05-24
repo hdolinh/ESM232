@@ -120,7 +120,7 @@ summary(results)
 resultsl = results %>% gather(key="metric",value="value")
 ggplot(resultsl, aes(metric, value))+geom_boxplot()+facet_wrap(~metric, scales="free")
 
-
+# try this
 # assign an identifier to each row, use the same identify for columns of original streamflow data
 # we can then use that to pick data
 results$setid = seq(from=1,to=nrow(results))
