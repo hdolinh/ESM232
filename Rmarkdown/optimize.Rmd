@@ -1,0 +1,70 @@
+---
+title: "Optimize"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+Simple Example
+
+Pollution output as a function of temperature
+
+```{r}
+pollutant_export = function(x) {
+        result =( (x-2)**2)
+				return(result) 
+        }
+
+temps = seq(from=-3,to=10)
+plot(temps, pollutant_export(temps), col="green", cex=5, pch="*")
+
+
+
+
+```
+
+What temperature minimizes pollutant export?
+
+Easy to see from graph
+
+But can use
+
+*optimize*
+
+requires function to be minimized, lower and upper bounds of parameter, and tolerance (optional)
+
+tolerance is how close do you need to get to minimum
+
+Returns parameter value that gives the minimum
+and how close you got
+
+```{r}
+
+result=optimize(pollutant_export, lower=-3, upper=10)
+result
+```
+
+A more complex example
+
+8888805844
+
+eclaimsline.com
+
+```{r}
+source("../R/compute_profit.R")
+source("../R/compute_yield.R")
+source("../R/compute_NPV.R")
+
+crop_pars = c(ts=0.4, tp=0.5, base.yield=500, Topt=25, max.water=800)
+
+optimize(compute_profit, lower=0, upper=400, T=c(20,30,25), P=c(250,144,100), discount=0.01, price=50, cost=150, crop.pars=crop_pars,  maximum=T)
+
+# cheapter water
+optimize(compute_profit, lower=0, upper=400, T=c(20,30,25), P=c(250,144,100), discount=0.01, price=50, cost=25, crop.pars=crop_pars,  maximum=T)
+
+
+```
+

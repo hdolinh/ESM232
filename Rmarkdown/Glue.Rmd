@@ -1,0 +1,129 @@
+---
+title: "Glue"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#library(ecohydroexample)
+library(tidyverse)
+library(Hmisc)
+```
+
+
+```{r setup, echo=FALSE}
+
+load("../Data/simQ.rda")
+load("../Data/simstats.rda")
+nparm = nrow(simstats) 
+```
+
+Create a single measure of accuracy - we will combine NSE and an estimate of mean percent error
+Note that 'count' all measures equally we need to make sure they all go between 0-1, and closer to 1 is a 'better' fit
+
+Larger percent error is 'worse' model fit, so we will transform
+(1-abs(Percent.Error)/100), and make any negative values (eg. percent error greater than 100 percent 0)
+
+For NSE we make all values less than 0, 0
+
+We multiply to get a combined accuracy measure
+
+Then use the combined accuacy measure to define behavioural parameter set (**simstats_acc**) - two options
+
+*define a threshold (we will use 30%)
+* take top 50 performing parameter sets
+
+(we go with the latter but code could be commented to go with threshold approach)
+
+```{r setup, echo=FALSE}
+
+simstats$accuracy=pmax(0.0,simstats$nse)*pmax(0.0,(1-abs(simstats$perr.total/100)))
+# pmax simply takes the maximum of the two values; we do this to remove negative values of performance measures by making them zero
+# look at range of accuracy
+summary(simstats$accuracy)
+
+# 1) selecting behaviorial or acceptable parameters sets
+
+threshold = 0.3
+simstats_acc = subset(simstats, simstats$accuracy > threshold)
+
+# as an alternative  what if you want the top N parameter sets
+topN = 50
+tmp = simstats[order(simstats$accuracy,decreasing=T),]  
+simstats_acc=tmp[1:topN,]
+
+```
+
+Now define "weights" (likelihood) based on parameter performance for the acceptable or behaviorial parameters
+
+We want the sum of the weights to equal 1
+
+* accuracy measure defined above will define weight
+* we normalize by the range of accuracy for the behavioural parameters  
+* this **relative accuracy ** becomes the weight
+* note we now only work with behavioural parameter sets (in ** simstats_acc ** versus ** simstats **)
+
+
+
+```{r weighting, echo=FALSE}
+
+# create a weight for each parameter set based on its relative accuracy
+max_acc=max(simstats_acc$accuracy)
+min_acc=min(simstats_acc$accuracy)
+simstats_acc$w_acc=(simstats_acc$accuracy-min_acc)/(max_acc-min_acc)
+sum_acc=sum(simstats_acc$accuracy)
+simstats_acc$wt_acc=simstats_acc$accuracy/sum_acc
+
+Nacc = nrow(simstats_acc)
+
+```
+
+One way to use weights is to define a maximum likelihood estimate by averaging (weighted by accuracy) streamflow from all behavioural simulations 
+
+We use the **row** in simstats_acc to find the appropriate modelled streamflow in ** simQ **
+
+```{r mle, echo=FALSE}
+
+# generate a streamflow as weighted average of all  acceptable parameter sets
+
+accept_cols = simstats_acc$row
+accept_wts = simstats_acc$wt_acc
+aver_flow = apply(simQ[,accept_cols],1, weighted.mean, accept_wts)
+
+# add some date information or simply add to simQ
+
+simQ$mleQ = aver_flow
+
+ggplot(simQ, aes(x=date, y=mleQ))+geom_line(col="red")+labs(y="Streamflow mm/day")
+
+
+```
+
+We could plot all behavioral estimates to range given behavior parameters
+
+Or better, use weights to define upper and lower streamflow quantiles (using **wtd.quantile** from Hmisc package)
+We will need the number from the column name to link with weights
+
+```{r plotting, echo=FALSE}
+
+#all parameters
+a = simQ[,accept_cols]
+b = simQ[,c("date","month","year","day","wy")]
+tmp = as.data.frame(cbind(a,b))
+Q_acc = tmp%>% gather(key="sim",value="Q", -date,-month,-year,-day,-wy)
+ggplot(Q_acc, aes(x=date, y=Q))+geom_line()+theme(legend.position = "none")
+
+# get quantiles for each day
+accQ_quantile=apply(simQ[,accept_cols],1,"wtd.quantile",weights=accept_wts,prob=c(0.05,0.5, 0.975),normwt=T)
+accQ_quantile=as.data.frame(t(accQ_quantile))
+colnames(accQ_quantile)=c("5%","mid", "95%")
+
+accQ_quantile = as.data.frame(cbind(accQ_quantile, simQ[, c("date","month","year","day","wy")]))
+
+accQ_quantilel = accQ_quantile %>% gather(key="quant",value="Q",-date,-month,-year,-day,-wy)
+
+ggplot(accQ_quantilel, aes(x=date, y=Q, col=quant))+geom_line()+labs(y="streamflow (mm/day)")
+
+# just one year
+ggplot(subset(accQ_quantilel, wy==1968), aes(x=date, y=Q, col=quant))+geom_line()+labs(y="streamflow (mm/day)")+scale_colour_discrete(name="prediction quantile")
+
