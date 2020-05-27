@@ -6,6 +6,7 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
+library(chron)
 ```
 
 Some examples of model evaluation using results
@@ -31,7 +32,7 @@ ggplot(sagerl, aes(date, str, col=source, linetype=source))+geom_line()
 ggplot(sagerl, aes(date, str, col=source, linetype=source))+geom_line()+scale_y_continuous(trans="log")+labs(y="streamflow mm/day")
 
 # look at it another way
-ggplot(sager, aes(model,obs))+geom_point()+geom_abline(intercept=0, slope=1, col="red")
+ggplot(sager, aes(obs, model))+geom_point()+geom_abline(intercept=0, slope=1, col="red")
 
 # apply some functions to measure performance
 
@@ -105,7 +106,7 @@ summary(res)
 
 # another example using our low flow statistics
 # use apply to compute for all the data
-res = msage %>% select(-date, -month, -day, -year, -wy, -obs ) %>% apply(2,FUN=compute_lowflowmetrics, o=sager$obs, month=msage$month, day=msage$day, year=msage$year, wy=msage$wy)
+res = msage %>% select(-date, -month, -day, -year, -wy ) %>% apply(2,FUN=compute_lowflowmetrics, o=sager$obs, month=msage$month, day=msage$day, year=msage$year, wy=msage$wy)
 
 # extract information from the list
 results = as.data.frame(matrix(unlist(res), byrow=T, ncol=4))
@@ -126,13 +127,13 @@ ggplot(resultsl, aes(metric, value))+geom_boxplot()+facet_wrap(~metric, scales="
 results$setid = seq(from=1,to=nrow(results))
 
 head(msage)
-colnames(msage)=c(results$setid, "date","month","year","day","wy","obs")
-msagel = msage %>% gather(key="setid",value="streamflow", -date, -month, -year, -day, -wy, -obs)
+colnames(msage)=c(results$setid, "date","month","year","day","wy")
+msagel = msage %>% gather(key="setid",value="streamflow", -date, -month, -year, -day, -wy)
 
 # pick only good parameters
 # use absolute value (abs) for the error as you want it to be small magnitdue, whether +ve or -ve
 accept_par = subset(results, annual_min_cor > 0.7 & low_month_cor > 0.7 & abs(annual_min_err < 0.2) & abs(low_month_err) < 5)
-nrow(best_par)
+nrow(accept_par)
 
 # here are some possible ways to plot
 # plot only these streamflow
