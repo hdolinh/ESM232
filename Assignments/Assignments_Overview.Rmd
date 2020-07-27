@@ -1,0 +1,28 @@
+---
+title: "Assignments Overview"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## List of Assignments
+
+*  Conceptual Models
+
+* Function Development
+
+* Linking two functions together
+
+* Sensitivity Analysis
+
+* Dynamic Models - Continuous
+
+* Dynamic Model  - Discrete
+
+* Model Evaluation
+
+Idea for each topic, in class we work through an example - submit response by next class - will go through in class
+All formal assignments will be associated with building towards their project.
+

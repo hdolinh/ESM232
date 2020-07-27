@@ -1,0 +1,64 @@
+---
+title: "Peer_review_assignment_draft"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+Notes for me - do in at least group of 3 so that there are multiple people
+Useful to do twice so they get used to using the frame
+Eli-Review is asynchronous
+
+
+
+# The Task
+
+## Why
+Breaking a large modeling task into piece  - and implment these pieces as funcntions that a) work and b) are 'good' functions-  re-usable, generalizable, reliable, easy to understand.  Further individual functions can be useful to play with to understanding how environmental resposes vary under different conditions (give them examples)
+
+Add why we are doing this...
+
+# What you will do
+1. Find a paper (or text book) that documents how an environmentally interesting variables responds to conditions.   
+
+2. Build the function
+
+Define about what the inputs and outputs of your model should be - think about what would be most useful for how you might use this model
+
+Think about the type of inputs. Are they 'single' values - or might be arrays, lists, even maps
+Make sure your internal model code can handle the type of input
+
+Could you build the function so that it would work with multiple inputs (if not, why not)
+
+Choose descriptive names, meaningful default values where appropriate
+
+Provide comments throughout the function to explain what it is doing
+
+2. Test your function; create some inputs, where you know what the output should be and try the function (fix any errors)
+
+3. Write documentation at the top of the function; to describe in one-sentence what the function does, and the inputs and output (make sure that you include units; or if it works with any units note that)
+
+2. Review your function - think about what might go wrong, and add error checking
+
+3  Refine your function - once you have a basic function, think about whether there might be useful options, so that your function might be useful to a broader community (or as part of other projects), go back and add these in.
+
+# Peer Review
+
+Trait identification
+
+Was the goal of the function clear from the 1-2 sentences in the documentation?
+
+Were you able to run the function with made up data? Any difficulties? Could you 'break' the function (e.g create a situation where the function didn't work as expected)
+
+When you look through the model code, was it easy to follow (comments, variable names)? Note anything that was not clear
+
+Where there steps that you think could have been simpler or more efficient (If so, note them)
+
+Describe (in words not code :) one modification that would involve adding functionality, or an additional user options
+
+
+
+
+
+
