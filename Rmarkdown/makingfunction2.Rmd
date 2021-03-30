@@ -64,7 +64,7 @@ Implement Simpson's diversity as a function..
 Generating categorical data by sampling, what if we want to generate 'artifical'
 sampling for testing
 
-Usinging **sample**
+Using **sample**
 
 ```{r catsampline, echo=TRUE, eval=TRUE}
 
