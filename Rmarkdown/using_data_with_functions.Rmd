@@ -12,7 +12,7 @@ library(purrr)
 
 ```
 
-## Organizing your work
+# Organizing your work
 
 * Store function definition in **R** subdirectory
 * Store  Rmarkdown in different subdirectory (**Rmarkdown**)
@@ -24,7 +24,7 @@ source("../R/power_gen.R")
 power_gen
 ```
 
-## Generating Data for your function
+# Generating Data for your function
 
 You often want to apply your function to a range of data, that can come from
 
@@ -37,7 +37,7 @@ You often want to apply your function to a range of data, that can come from
 
 ***
 
-### Random Numbers as Inputs
+# Random Numbers as Inputs
 
 * sample from distributions (normal, uniform, poisson), which distribution depends on the model
 * R has many tools for generating samples from distributions with known parameters (such as mean, standard deviation, or min/max)
@@ -50,7 +50,7 @@ You often want to apply your function to a range of data, that can come from
   Others?
 
 
-### Steps for running your model over multiple inputs
+# Steps for running your model over multiple inputs
 1. design a data structure to store results: sometimes this is automatic but not always
 2. generate the input data
 3. apply to the model
@@ -117,7 +117,7 @@ See example below
 ```{r sampling2}
 
 # create a sequence of efficienies
-Keff = seq(from=0.1, to=0.5, by=0.1)
+Keff = seq(from=0.1, to=0.8, by=0.1)
 length(Keff)
 
 # create a data structure - now we have to have one for each Keff
@@ -125,7 +125,7 @@ length(Keff)
 # use map_dfc to run for each value of Keff - where we get results for all heights and flow rates for each efficiency value
 
 
-res = map_dfc(Keff, power_gen, height=reservoir_model_res$height, flow=reservoir_model_res$flow)
+res = Keff %>% map_dfc(~power_gen(height=reservoir_model_res$height, flow=reservoir_model_res$flow, Keff=.))
 
 head(res)
 # turn it into a data frame to support adding colums
@@ -219,15 +219,15 @@ Here we will also use *map* from *purrr* to help us extract elements from a list
 
 ```{r}
 
-source("../R/power_gen_summary.R")
 
-height = runif(min=0, max=100, n=100)
+
+height = runif(min=0, max=10, n=100)
 flow = runif(min=0, max=2, n=100)
 
 power = power_gen_summary(height=height, flow=flow)
 head(power)
 
-# try it yourself - try modifying power_gen_sumamry to also output the sum!
+# try it yourself - try modifying power_gen_summary to also output the sum!
 
 # lets now look at how summary varies with efficiency
 Keff = seq(from=0.1, to=0.9, by=0.05)
@@ -236,7 +236,7 @@ Keff = seq(from=0.1, to=0.9, by=0.05)
 # we can't use map_df because our function now returns multiple items in a list
 # so R can't so easily turn it into a data frame
 # the basic *map* returns a list of lists!
-res = map(Keff, power_gen_summary, height=reservoir_model_res$height, flow=reservoir_model_res$flow) 
+res = Keff %>% map(~power_gen_summary( height=reservoir_model_res$height, flow=reservoir_model_res$flow, Keff=.x) )
 
 # res is now a list of list swith values of max, min and mean for each Keff
 head(res)
@@ -260,7 +260,7 @@ resdf = map_dfr(res,`[`, c("mean","min","max"))
 resdf$Keff = Keff
 
 # now we have a form that we can plot
-ggplot(resdf, aes(Keff, max))+geom_point() + labs(y="Max Power (W/s)", "Efficiency")
+ggplot(resdf, aes(Keff, mean))+geom_point() + labs(y="Max Power (W/s)", "Efficiency")
 
 # try this if you modify the function to also output the total power
 # try running with a different range of Keff
