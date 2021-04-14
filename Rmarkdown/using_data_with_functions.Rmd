@@ -220,7 +220,7 @@ Here we will also use *map* from *purrr* to help us extract elements from a list
 ```{r}
 
 
-
+source("../R/power_gen_summary.R")
 height = runif(min=0, max=10, n=100)
 flow = runif(min=0, max=2, n=100)
 

@@ -6,7 +6,7 @@
 #' @param PR performance ratio (system related) (0-1) default is 0.75
 #' @param solar  array with the following columns day month year Kdown_direct Kdown_diffuse (kJ/m2/day)
 #' @param eunits energy output: J results in kJ/m2/year or W then assume KWh, default = J
-#' @param ethresh threshold rdiation (kJ/m2) below which efficiency fall to 0
+#' @param ethresh threshold radiation (kJ/m2) below which efficiency fall to 0
 #' @param g TRUE/FALSE  graph results default=TRUE
 #' @param clr colour of grph default "blue"
 #' @param etype "both" uses both direct and diffuse, "direct' direct only, "diffuse" diffuse only default="both"
@@ -37,7 +37,7 @@ solarpv = function(area, eff=0.8, PR=0.75, solar, clr="blue", eunits="J", etype=
     return(result)
   }
  
-  solar$Kadj = sapply(solar$total, adjusteff, ethresh=ethresh, eff=eff)
+  solar  = solar %>%  mutate(Kadj = adjusteff(total, ethresh=ethresh, eff=eff))
                     
   
   # total annual radiation
