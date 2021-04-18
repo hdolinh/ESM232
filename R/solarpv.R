@@ -41,7 +41,7 @@ solarpv = function(area, eff=0.8, PR=0.75, solar, clr="blue", eunits="J", etype=
                     
   
   # total annual radiation
-  annualsolar = solar %>% group_by(year) %>% summarize(Kadj=sum(Kadj))
+  annualsolar = solar %>% group_by(year) %>% dplyr::summarize(Kadj=sum(Kadj))
   
   
   # compute electricity

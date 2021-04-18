@@ -6,6 +6,7 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
+library(ggpubr)
 
 ```
 ## User control of functions
@@ -71,7 +72,7 @@ site2df = data.frame(year = tmp$annual$year, elect= tmp$annual$elect)
 ggplot(site2df, aes(year,elect, group=year ))+geom_boxplot()
 
 # we also might want an average across parameter uncertainty
-site2_average = site2df %>% group_by(year) %>% summarize(elect=mean(elect))
+site2_average = site2df %>% group_by(year) %>% dplyr::summarize(elect=mean(elect))
 
 ```
 
