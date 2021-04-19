@@ -6,6 +6,7 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
+library(purrr)
 
 ```
 ## User control of functions
@@ -18,7 +19,7 @@ This allows functions to be more flexible
 Think of a model of ecosystem production that changes calculations if vegetation is grass versus a tree
 
 
-Built in R functions do this alot - they allow users to specify methods (**glm** for example, alows family to set the type of model - binomical or gaussian) 
+Built in R functions do this alot - they allow users to specify methods (**glm** for example, alows family to set the type of model - binomial or gaussian) 
 
 Here's an example
 
@@ -68,7 +69,7 @@ head(site2)
 tmp = map_df(site2,`[`, c("annual")) 
 site2df = data.frame(year = tmp$annual$year, elect= tmp$annual$elect)
 # now we could plot
-ggplot(site2df, aes(year,elect, group=year ))+geom_boxplot()
+ggplot(site2df, aes(year,elect, group=year ))+geom_boxplot()+labs(y="Electricity generated in W")
 
 # we also might want an average across parameter uncertainty
 site2_average = site2df %>% group_by(year) %>% summarize(elect=mean(elect))

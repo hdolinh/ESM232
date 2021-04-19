@@ -125,7 +125,7 @@ length(Keff)
 # use map_dfc to run for each value of Keff - where we get results for all heights and flow rates for each efficiency value
 
 
-res = Keff %>% map_dfc(~power_gen(height=reservoir_model_res$height, flow=reservoir_model_res$flow, Keff=.))
+res = Keff %>% map_dfc(~power_gen(height=reservoir_model_res$height, flow=reservoir_model_res$flow, Keff=.x))
 
 head(res)
 # turn it into a data frame to support adding colums
