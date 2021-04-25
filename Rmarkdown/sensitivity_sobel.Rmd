@@ -84,6 +84,10 @@ sens_Catm$prcc
 ## Sobel
 
 Sobel sensitivity analysis is similar to LHS approach 
+
+Sobel is more general - it can use parameter samples (we will approximate sampling here by using known distributions but you could use actual samples!)
+
+
 Breaks variance of output into 
 
 * variance associated directly with parameter alone (fraction associated with each parameter, sum to 1)
@@ -98,23 +102,21 @@ Similar workflow to LHS
 * look at sensitivity analysis metric from sobel
 
 
-#  Example - lets try it both ways
-
+#  Example 
 Atmospheric Conductance as a function of windspeed, vegetation height and parameters
 
 ```{r}
 
 source("../R/Catm.R")
-# names of our parameters
-# number of parameters 
 
-np=10000
+# generate two examples of random number from parmeter distributions
+
+np=1000
 mult_zo = rnorm(mean=0.1,sd=0.01, n=np)
 mult_zd = runif(min=0.6,max=0.8, n=np)
 v = rnorm(mean=5, sd=1, n=np)
 height = rnorm(mean=20, sd=1, n=np)
 
-# generate two examples of random number from parmeter distributions
 
 X1 = cbind.data.frame(mult_zo, mult_zd, v, height=height)
 
@@ -126,19 +128,25 @@ height = rnorm(mean=20, sd=1, n=np)
 
 X2 = cbind.data.frame(mult_zo, mult_zd, v, height=height)
 
-sens_Catm_sobel = sobol2007(model = NULL, X1, X2, nboot = 100)
+# there are different versions of sobol functions that have different approaches for estimating parameters and indices, we use an approach implemented by jansen 
 
+sens_Catm_sobel = soboljansen(model = NULL, X1, X2, nboot = 100)
+
+
+# Take a look at the sobel generated sensitivity object
+# your parameters sets for sensitivity analysis are in X
 
 # run model for all parameter sets
-res = mapply(FUN=Catm,  mult_zo=sens_Catm_sobel$X$mult_zo,mult_zd=sens_Catm_sobel$X$mult_zd, height=sens_Catm_sobel$X$height, v=sens_Catm_sobel$X$v, MoreArgs=list(zm=30))
+
+res = pmap_dbl(as.data.frame(sens_Catm_sobel$X), Catm)
 
 
 sens_Catm_sobel = sensitivity::tell(sens_Catm_sobel,res, res.names="ga")
 
-# first-order indices (main effect without co-variance)
+# parameter with interactions first-order indices (main effect without co-variance)
 sens_Catm_sobel$S
 
-# total sensitivity index -note that this partitions the output variance - so values sum to 1
+# parameter alone sensitivity index -note that this partitions the output variance - so values sum to 1
 sens_Catm_sobel$T
 
 # The difference between the main effect and total effect can tell us something about how the parameter influences results
