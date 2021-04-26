@@ -146,7 +146,7 @@ sens_Catm_sobel = sensitivity::tell(sens_Catm_sobel,res, res.names="ga")
 # parameter with interactions first-order indices (main effect without co-variance)
 sens_Catm_sobel$S
 
-# parameter alone sensitivity index -note that this partitions the output variance - so values sum to 1
+# parameter alone sensitivity index -note that this partitions the output variance -
 sens_Catm_sobel$T
 
 # The difference between the main effect and total effect can tell us something about how the parameter influences results
