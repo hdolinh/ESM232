@@ -9,6 +9,7 @@ library(sensitivity)
 library(pse)
 library(tidyverse)
 library(gridExtra)
+library(purrr)
 ```
 
 Another example
@@ -75,7 +76,7 @@ plotecdf(sens_Catm, col="red", lwd=5, xlab="Atm Cond (mm/s)")
 # we can also plot partial correlation coefficients
 plotprcc(sens_Catm)
 # and we can look at the actual values
-sens_Catm$prcc
+
 # note because this is a linear model correlations are high for both parameters - and similar
 
 ```
@@ -90,8 +91,8 @@ Sobel is more general - it can use parameter samples (we will approximate sampli
 
 Breaks variance of output into 
 
-* variance associated directly with parameter alone (fraction associated with each parameter, sum to 1)
-* variance associated with parameter and interaction with other parameters (sum can be more than 1)
+* variance associated directly with parameter alone (fraction associated with each parameter, sum to 1) First order sensitivity 
+* variance associated with parameter and interaction with other parameters (sum can be more than 1) Total Effect
 
 
 Similar workflow to LHS
@@ -114,7 +115,7 @@ source("../R/Catm.R")
 np=1000
 mult_zo = rnorm(mean=0.1,sd=0.01, n=np)
 mult_zd = runif(min=0.6,max=0.8, n=np)
-v = rnorm(mean=5, sd=1, n=np)
+v = rnorm(mean=5, sd=0.1, n=np)
 height = rnorm(mean=20, sd=1, n=np)
 
 
@@ -123,7 +124,7 @@ X1 = cbind.data.frame(mult_zo, mult_zd, v, height=height)
 # repeat sampling
 mult_zo = rnorm(mean=0.1,sd=0.01, n=np)
 mult_zd = runif(min=0.6,max=0.8, n=np)
-v = rnorm(mean=5, sd=1, n=np)
+v = rnorm(mean=5, sd=0.1, n=np)
 height = rnorm(mean=20, sd=1, n=np)
 
 X2 = cbind.data.frame(mult_zo, mult_zd, v, height=height)
@@ -143,14 +144,13 @@ res = pmap_dbl(as.data.frame(sens_Catm_sobel$X), Catm)
 
 sens_Catm_sobel = sensitivity::tell(sens_Catm_sobel,res, res.names="ga")
 
-# parameter with interactions first-order indices (main effect without co-variance)
+# main effect:  partitions variance (main effect without co-variance) - sums approximately to one
 sens_Catm_sobel$S
 
-# parameter alone sensitivity index -note that this partitions the output variance -
+# total effect - accounts for parameter interactions
 sens_Catm_sobel$T
 
-# The difference between the main effect and total effect can tell us something about how the parameter influences results
-# so in the main effect we include interactions with other parameters
+# Both the main effect and total effect can tell us something about how the parameter influences results
 
 
 print(sens_Catm_sobel)
@@ -170,20 +170,3 @@ both = cbind.data.frame(sens_Catm_sobel$X, gs=sens_Catm_sobel$y)
 ggplot(both, aes(v,gs, col=height))+geom_point()+labs(y="Conductance (mm/s)", x="Windspeed")
 
 ```
-
-# Assignment
-
-
-Adjust your almond model to  output ONLY the mean almond yield anomoly IF the users sets parameter (e.g mean_only = TRUE))
-
-Perform a sensitivity analysis of how mean anomaly varies ALL of the parameters used in the yield model  
-Assume parameters are normally distribute with standard deviation of 20% mean value
-
-Rank the parameters in term of their sensitivity
-Graph uncertainty in mean yield anomaly across all parameter uncertainty (boxplot and cummulative distribution of the output).
-
-Repeat using the LHS and Sobel methods
-
-Repeat using twice as many parameter sets as you did in your first sensitivity analysis - and look at how this changes the sensitivity results
-
-Submit R markdown and short write up describing what you learned from the sensitivity analysis

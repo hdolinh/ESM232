@@ -94,7 +94,6 @@ ggplot(tmp, aes(yield, value, col=yield))+geom_boxplot()+labs(y="Yield (as anomo
 
 ```
 
-For Wednesday try a sensitivity analysis with the compute_NPV function, bring to class
 
 
 
