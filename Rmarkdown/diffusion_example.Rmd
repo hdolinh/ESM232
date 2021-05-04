@@ -56,7 +56,7 @@ filled.contour(res$conc, xlab="Time", ylab="Distance")
 filled.contour(res$qin, xlab="Time", ylab="Distance")
 
 # what if we increase diffusivity
-resfast=diff1(initialC=10,nx=10,dx=1,nt=10,dt=10,D=0.08,area=1)
+resfast=diff1(initialC=10,nx=10,dx=0.5,nt=10,dt=10,D=0.08,area=1)
 filled.contour(resfast$conc, xlab="Time", ylab="Distance")
 
 
