@@ -81,7 +81,7 @@ Needs
 
 ```{r}
 
-source("../R/exppop_play.R")
+source("../R/dexppop_play.R")
 
 # set up using the same parameters
 pcompare = list(r=r,K=K)

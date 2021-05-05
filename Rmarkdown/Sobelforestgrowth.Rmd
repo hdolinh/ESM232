@@ -1,0 +1,152 @@
+---
+title: "Sobelforestgrowth"
+output: html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(deSolve)
+library(sensitivity)
+```
+
+```{r sen}
+source("../R/dforestgrowth.R")
+
+# lets start with sobel 
+library(sensitivity)
+
+# come up with first set of sample parameters
+# we will assume that we know the initial population,
+
+Cinitial=10
+
+# want to learn about sensitivity to growth rate (g and r)
+# set the number of parameters
+np=100
+closer = rnorm(mean=50, sd=50*0.1, n=np)
+K = rnorm(mean=250, sd=250*0.1, n=np)
+r = rnorm(mean=0.01, sd=0.01*0.1, n=np)
+g = rnorm(mean=2, sd=2*0.1, n=np)
+X1 = cbind.data.frame(closer=closer, r=r, g=g, K=K)
+
+# repeat to get our second set of samples
+np=100
+K = rnorm(mean=250, sd=250*0.1, n=np)
+closer = rnorm(mean=50, sd=50*0.1, n=np)
+r = rnorm(mean=0.01, sd=0.01*0.1, n=np)
+g = rnorm(mean=2, sd=2*0.1, n=np)
+X2 = cbind.data.frame(closer=closer, r=r, g=g,K=K)
+
+# create our sobel object and get sets ofparameters for running the model
+
+sens_P = soboljansen(model = NULL,X1, X2, nboot = 300)
+
+# our parameter sets are
+head(sens_P$X)
+
+# run our differential equation and keep the output
+# BUT
+# what output do we want  to keep
+# how about maximum population if we run the model for 200 years, and how many years to get to the carrying capacity
+
+# for illustration lets look at running just one parameter sets and summarizing results
+sens_P$X[1,]
+# recall ODE needs ALL of our parameters in a single list 
+# initial population and timnes for which we want output 
+Pinitial
+
+# gets results for 300 years (evaluating every year)
+simtimes = seq(from=1, to=300)
+parms = list(r=sens_P$X$r[1], closer=sens_P$X$closer[1], g=sens_P$X$g[1], K=sens_P$X$K[1])
+
+result = ode(y=Pinitial, times=simtimes, func=dforestgrowth, parms=parms)
+
+head(result)
+colnames(result)=c("time","C")
+# turn it into a data frame
+result = as.data.frame(result)
+ggplot(result, aes(time, C))+geom_point()
+
+# extra our metrics of interest  from this
+# maximum population it gets to
+maxC = max(result$C)
+meanC = mean(result$C)
+
+```
+
+What if we want to run for all parameters
+
+Lets create two additional functions that will help us
+
+* a function that computes the metrics we want
+
+* a function that runs our ode solver and computes the metrics (I call it a wrapper function as it is really just a workflow/wrapper to call ode solver and then compute metrics)
+```{r sen2}
+# turn computing our metrics into a function
+
+compute_metrics = function(result) {
+  maxC = max(result$C)
+  meanC = mean(result$C)
+return(list(maxC=maxC, meanC=meanC))}
+
+# try it on our first parameter set
+compute_metrics(result)
+
+# great but we need to apply the ode and this function for all of our parameters
+
+
+
+# define a wrapper function to do everything we need - run solver and compute metrics - and send back results for each parameter
+
+p_wrapper = function(r,g, closer, K, Cinitial, simtimes, func) {
+    parms = list(r=r,g=g,closer=closer,K=K)
+    result = ode(y=Cinitial, times=simtimes, func=dforestgrowth, parms=parms) 
+    colnames(result)=c("time","C")
+  # get metrics
+  metrics=compute_metrics(as.data.frame(result))
+  return(metrics)
+}
+
+# now use pmap as we did before
+
+allresults = sens_P$X %>% pmap(p_wrapper, Cinitial=Cinitial, simtimes=simtimes, func=dforestgrowth())
+
+# extract out results from pmap into a data frame
+allres = allresults %>% map_dfr(`[`,c("maxC", "meanC"))
+
+
+# create boxplots
+tmp = allres %>% gather(key="metric", value="value")
+ggplot(tmp, aes(metric, value, col=metric))+geom_boxplot()
+```
+
+Compute the sobol indicies for each metric
+
+```{r sen3}
+# sobol can only handle one output at a time  - so we will need to do them separately
+
+sens_P_maxC = sensitivity::tell(sens_P,allres$maxC)
+
+# first-order indices (main effect without co-variance)
+sens_P_maxC$S
+
+# total sensitivity index -note that this partitions the output variance - so values sum to 1
+sens_P_maxpop$T
+
+plot(sens_P_maxpop)
+
+
+# create another one for mean
+sens_P_meanC = sensitivity::tell(sens_P,allres$meanC)
+# first-order indices (main effect without co-variance)
+sens_P_meanC$S
+
+# total sensitivity index -note that this partitions the output variance - so values sum to 1
+sens_P_meanC$T
+
+# notice how K is much lessimportant here
+plot(sens_P_meanC)
+
+
+```
