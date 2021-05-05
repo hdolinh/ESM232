@@ -145,7 +145,7 @@ compute_metrics(result)
 
 p_wrapper = function(r,K, Pinitial, simtimes, func) {
     parms = list(r=r, K=K)
-    result = ode(y=Pinitial, times=simtimes, func=dexppop_play, parms=parms) 
+    result = ode(y=Pinitial, times=simtimes, func=func, parms=parms) 
     colnames(result)=c("time","P")
   # get metrics
   metrics=compute_metrics(as.data.frame(result))
