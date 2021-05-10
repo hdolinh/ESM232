@@ -1,0 +1,151 @@
+---
+title: "Marry"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## A bit more on data structures
+
+# Multi-dimension arrays
+
+Multi-dimension arrays can be useful when you want to keep track of something that varies in more than 2 ways (rows and columns)
+
+
+Examples?
+
+Multi-dimensionarray can be useful- but tricky - 
+in R sometimes useful for
+doing calculations and then we can transform them to data frames for plotting
+
+Imagine
+soil moisture at 2 depths for 5 different farms
+and 4 different orchard types within each farm
+
+* fruits: 
+  avocado, apple,  orange  almond - so 4 fruits
+ 
+* soil moisture 
+  store soil moisture at 2 depths 
+ ( 25cm, 0.5m)
+ 
+* 5 farms (A through E)
+
+
+We use the *array* command to define multi-dimensional arrays
+and *dim* to check how many dimensions an array has
+
+Also lets us look at nested *for* loops
+
+```{r mdim}
+
+fruit = c("avocado", "apple", "orange",  "almond")
+depth = c("25","50")
+farm = c("A","B","C","D","E")
+soilm = array(dim=c(5,4,2))
+dim(soilm)
+soilm
+# or 
+
+soilm = array(dim=c(length(farm), length(fruit), length(depth)),
+              dimnames = list(farm,fruit,depth))
+# put some data in the array
+for (i in 1:5) {
+  for (j in 1:4) {
+    value = runif(min=0.2,max=0.5,n=2)
+    soilm[i,j,]=value
+  }
+}
+# to see whole array
+soilm
+
+# access an element - 3 dimensions so 3 numbers
+soilm[1,,]
+
+soilm[,1,]
+
+soilm[,,1]
+
+# how would you get all measurements for the 50cm depth
+# how would you get all values for oranges
+# how would you get all values for avocadoes in farm C
+
+# single values
+soilm[1,2,2]
+```
+
+Once we have a multi-dimensional array we can apply calculations over the different dimenstions
+
+We just need to keep track of which dimension is which
+Farm- Fruit - Soil
+
+```{r}
+
+
+
+# overall whole area and all depths
+# easiest!
+averagesoilm = mean(soilm)
+averagesoilm
+
+#lets say we want to keep all of the locations (farms and fruit) but average 
+# over the two depths - average over the 3rd dimension
+
+# note that we leave out the dimension we can to 'get rid of'
+averagegrid = apply(soilm, c(1,2),mean)
+averagegrid
+
+# now lets say we want to also find the average for each farm
+# keep the first dimension (5-farms) but average over others
+averagefarm = apply(soilm, c(1), mean)
+averagefarm
+
+# average by fruit
+averagefruit = apply(soilm, c(2), mean)
+averagefruit
+
+# average by  soil moisture depth
+averagedepth = apply(soilm, c(3), mean)
+averagedepth
+
+# you can use other functions as well
+sumfruit = apply(soilm, c(2), sum)
+sumfruit
+
+# including your own function
+isdrought = function(sm, thresh) {
+  n = length(sm)
+  drought=TRUE
+  for (i in 1:n) {
+    if (sm[i] > thresh) drought=FALSE
+  }
+  return(drought)
+}
+soilm
+#local drought
+apply(soilm, c(1,2), isdrought, thresh=0.4)
+
+#farm drought
+apply(soilm, c(1), isdrought, thresh=0.5)
+
+#total area drought
+isdrought(soilm, thresh=0.3)
+isdrought(soilm, thresh=0.7)
+
+```
+
+finally you might not want to keep things in a multi-dimensional array
+
+We can use *as.data.frame.table*
+
+```{r}
+
+soilm_asdataframe = as.data.frame.table(soilm, responseName="Theta")
+colnames(soilm_asdataframe)=c("farm","fruit","depth","theta")
+ggplot(soilm_asdataframe, aes(farm,theta, col=fruit))+facet_wrap(~depth)+geom_point(size=3)
+
+
+```
+

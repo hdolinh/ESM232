@@ -1,0 +1,172 @@
+---
+title: "Spatial_mod"
+output: html_document
+---
+
+```{r begin, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Spatial Models
+
+Type of spatial model influences  model approach and issues
+
+* **Space only**
+* **Space + Time**
+
+Think about data structures needed to store states and fluxes in the model
+
+**vector**
+  location information; but not necessarily contingous; may include spatial information as input to the model
+  
+* country
+* eco-region
+    
+**raster**
+  area of interest is *discretized* into *patches*, and model applied to each 
+
+Two key categories
+
+* spatial heteogeneity only
+* spatial heterogneity + connectivity 
+
+# hydrologic connectivity example
+![lateral](hydro_lateral.jpeg)
+
+# Sensitivity
+
+For these models, all issues of parameter sensitivity analysis apply; 
+
+  * more challenging as there are essentially many parmaeter and input (sensitivity to spatial relationships - e.g increasing rainfall with elevation)
+  
+  * spatial scale is often a critical parameter 
+  Many models are sensitivity to spatial scale
+  
+  
+  
+# Getting started - a useful series of tutorials
+### Raster Data
+
+- [**Raster 00: Intro to Raster Data**](http://neondataskills.org/R/Introduction-to-Raster-Data-In-R/)
+- [**Raster 03: Raster Calculations**](http://neondataskills.org/R/Raster-Calculations-In-R/)
+- [**Raster 04: Work With Multi-Band Rasters**](http://neondataskills.org/R/Multi-Band-Rasters-In-R/)
+    - sample [Landsat image](Landsat7.tif) for [NDVI](https://earthobservatory.nasa.gov/Features/MeasuringVegetation/) calculation
+
+### Vector Data
+
+- [**Vector 00: Open and Plot Shapefiles**](http://neondataskills.org/R/open-shapefiles-in-R/)
+- [**Vector 01: Explore Shapefile Attributes**](http://neondataskills.org/R/shapefile-attributes-in-R/)
+- [**Vector 04: Convert from `.csv` to a Shapefile**](http://neondataskills.org/R/csv-to-shapefile-R/)
+    - sample [California gazetteer data](CA.csv) (from assignment 2)
+
+## Displaying spatial data
+
+- [Leaflet for R](https://rstudio.github.io/leaflet)
+
+# R packages that help with spatial data
+
+**raster**
+**rgdal**
+  essential for many spatial packages; requires installing **gdal** on your machine; can be problematic 
+  
+  for Mac users: I've found this site helpful
+  
+**terrain**
+  useful analysis based on DEMs (slope/aspect etc)
+  
+[Install gdal]  (https://trac.osgeo.org/gdal/wiki/BuildingOnMac)
+
+
+
+
+```{r setup}
+library(tidyverse)
+library(rgdal)
+library(raster)
+
+
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r simple, echo=FALSE}
+dem = raster("tifs/filleddem.tif")
+plot(dem)
+# value
+summary(dem)
+
+# spatial data (from tif)
+crs(dem)
+
+# change spatial scale
+dem_coarse = aggregate(dem, fact=40, fun=mean)
+crs(dem_coarse)
+
+stream=raster("tifs/streams.tif")
+
+# generate slope and aspect
+res = terrain(dem, opt=c("slope","aspect","flowdir"))
+plot(res)
+
+plot(res$slope)
+summary(res$slope)
+
+# create slope classes
+m <- c(0, 0.01, 1,  0.01, 0.3, 2,  0.3,1, 3)
+rclslope <- matrix(m, ncol=3, byrow=TRUE)
+slope_class = reclassify(res$slope, rclslope)
+
+# plot 
+plot(slope_class)
+res = addLayer(res, slope_class)
+res = addLayer(res, dem)
+
+
+# simple calculation with maps
+res$dem100 = round(res$filleddem/100)
+
+# turn a raster stack into a data frame
+res_df=as.data.frame(res)
+
+# make up some precipitation and temperature data
+# use terrain to scale precipitation and temperature
+# just an example
+base_elev = 300
+precip_base = 750
+k = 0.003
+base_temp = 15
+lapse = -0.006
+
+res_df = res_df %>% mutate(precip = ((filleddem-base_elev)*k+1)*precip_base)
+
+res_df = res_df %>% mutate(temp = ((filleddem-base_elev)*lapse + base_temp))
+# now you create models from this
+
+
+# send back to raster object
+# initialize layers
+res$precip = 0
+res$temp = 0
+res
+# add values
+res= setValues(res, res_df$precip, layer=7)
+res= setValues(res, res_df$temp, layer=8)
+
+plot(res$precip, main="Precip (mm/yr)")
+
+# simple functions can also be applied to raster layers in stack
+# imagine a simple model of slope failure vulnerability
+
+failure = function(x,y,z) {
+  a=z*y
+  b= a*(x-300)
+  return(b)}
+
+vulner = overlay(res$dem100, res$slope.1, res$precip, fun=failure)
+plot(vulner, main="Stress Model result")
+
+```
+
+

@@ -7,14 +7,13 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 #library(ecohydroexample)
 library(tidyverse)
-library(Hmisc)
 ```
 
 
 ```{r setup, echo=FALSE}
 
-load("../Data/simQ.rda")
-load("../Data/simstats.rda")
+load("Data/simQ.rda")
+load("Data/simstats.rda")
 nparm = nrow(simstats) 
 ```
 
