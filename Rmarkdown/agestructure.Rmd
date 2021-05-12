@@ -250,7 +250,7 @@ allp2 = cbind.data.frame(ps2,fs2)
 
 
 # get sobel samples
-sens_micro=sobol2007(model = NULL, allp1, allp2, nboot = 100)
+sens_micro=soboljansen(model = NULL, allp1, allp2, nboot = 100)
 
 head(sens_micro$X)
 nsim=nrow(sens_micro$X)
@@ -261,32 +261,20 @@ nsim=nrow(sens_micro$X)
 ini = c(1000,1000, 1000)
 nmonths = 12
 
-# first as a for loop for illustration
-# use as numeric to extract parameters
-res = rep(0, times=nsim)
-for (i in 1:nsim) {
-  tmp = evolve_pop(
-    fertility=as.numeric(sens_micro$X[i,c("f1","f2","f3")]), 
-    survivability=as.numeric(sens_micro$X[i,c("p12","p23","p34")]), 
-    initialpop=ini, nstep=nmonths)
-  res[i] = tmp$poptot[12]
-}
-
-# ALTERNATIVE (faster) implement with apply
 
 # as before combine our application of the the dynamics model - for each
 # parameter set, with code to extract our metric of interest (final population)
-p_wrapper = function(x, func, initialpop, nstep ) {
-fertility=as.numeric(c(x["f1"], x["f2"], x["f3"]))
-survivability= as.numeric(c( x["p12"], x["p23"], x["p34"]))
-res = evolve_pop(survivability =survivability, fertility = fertility, initialpop=initialpop, nstep=nstep)
+p_wrapper = function(p12, p23, p34, f1,f2,f3,use_func, initialpop, nstep ) {
+fertility=c(f1,f2,f3)
+survivability= c(p12,p23,p34)
+res = use_func(survivability =survivability, fertility = fertility, initialpop=initialpop, nstep=nstep)
 # now return the final population total
 return(finalpop=res$poptot[nstep])
 }
 
-# use apply here so we can specify rows of our sensitivity analysis parameter object 
-res = apply(sens_micro$X,1, p_wrapper,  initialpop=ini, nstep=nmonths, func=evolve_pop)
-           
+# use pmap here so we can specify rows of our sensitivity analysis parameter object 
+res = as.data.frame(sens_micro$X) %>% pmap_dbl(p_wrapper, initialpop=ini, nstep=nmonths, use_func=evolve_pop)
+         
 # plot results (variation in final population across all parameter)
 # ggplot needs a dataframe - so do a quick conversion with data.frame
 ggplot(data.frame(finalpop=res), aes(x=finalpop))+geom_density()
