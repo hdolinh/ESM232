@@ -7,8 +7,10 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(deSolve)
-library(gridExtra)
+library(ggpubr)
 library(tidyverse)
+library(sensitivity)
+library(purrr)
 ```
 
 Predictor Prey - 
@@ -47,8 +49,8 @@ p2=ggplot(as.data.frame(res), aes(pred, prey))+geom_point()
 
 # try other parameters to bring relative size of preditors higher
 
-library(gridExtra)
-grid.arrange(p1,p2)
+
+ggarrange(p1,p2)
 
 ```
 
@@ -81,13 +83,14 @@ ressimple = as.data.frame(res) %>% gather(key="animal", value="pop",-time)
 p1=ggplot(ressimple, aes(time, pop, col=animal))+geom_line()
 p1
 
-# also look at relationships between preditor and prey population and use color for time
-p2 = ggplot(as.data.frame(res), aes(pred, prey, col=as.factor(round(time/10))))+geom_point()
+# also look at relationships between preditor and prey population and use color for time 
+# I will remove the legend here to make it easier to see 
+p2 = ggplot(as.data.frame(res), aes(pred, prey, col=as.factor(round(time/10))))+geom_point()+theme(legend.position = "none")
 p2
 
-grid.arrange(p1,p2)
+ggarrange(p1,p2)
 
-# try with different parameter sets, can you create one where populations are stable
+# try with different parameter sets, can you create one where populations are stable - less cycling?
 
 ```
 
@@ -152,14 +155,11 @@ p_wrapper = function(rprey,alpha, eff, pmort, K, currpop, days, func) {
 # run our model for all parameters and extract the results
 currpop=c(prey=1, pred=1)
 days = seq(from=1,to=500)
-
-allresults = mapply(FUN=p_wrapper, rprey=sens_pars$rprey, K=sens_pars$K, alpha=sens_pars$alpha, 
-                    eff=sens_pars$eff, pmort=sens_pars$pmort,
- MoreArgs=list(currpop=currpop, days=days, func=lotvmodK))
-
+allresults = sens_pars %>% pmap(p_wrapper, currpop=currpop, days=days, func=lotvmodK)
+ 
 # take results back to unlisted form
-allres = as.data.frame(matrix(unlist(allresults), ncol=4, byrow=T))
-colnames(allres) = c("maxprey","minprey","maxpred","minpred")
+allres = allresults %>% map_dfr(`[`,c("maxprey","minprey","maxpred","minpred"))
+
 
 # range of response across parameter uncertainty
 allresl = allres %>% gather(key="metric",value="pop")
@@ -211,42 +211,44 @@ Make dprey and dpred equal to 0 and rearrange
 Try setting you initial conditions close to these values and see what happens
 
 
-```{stability r}
+```{r stabilitynew}
 
 # set parameter list
-pars = data.frame(rprey=0.1, alpha=0.6, eff=0.8,pmort=0.4, K=20)
+pars = data.frame(rprey=0.1, alpha=0.6, eff=0.8,pmort=0.4, K=200)
 
 # now lets try initial conditions that will be stable
-preyi = with(pars, pmort/(eff*alpha))
-predi = with(pars, rprey/alpha*(1-preyi/K))
+preyi = with(pars, pmort/(eff*alpha)) 
+predi = with(pars, rprey/alpha*(1-preyi/K)) 
 # times when you want to evaluate
 days = seq(from=1,to=500)
 
 # lets first see what happens when we start with 1 of each
-currpop=c(prey=1, pred=1)
+currpop=c(prey=80, pred=1)
 # run our differential equation solver
 res = ode(func=lotvmodK, y=currpop, times=days, parms=pars)
-# estract the results
-ressimple = as.data.frame(res) %>% gather(key="animal", value="pop",-time)
+# extract the results
+res_smallstart = as.data.frame(res) %>% gather(key="animal", value="pop",-time)
 # graph both populations over time
-p1=ggplot(ressimple, aes(time, pop, col=animal))+geom_line()
+p1=ggplot(res_smallstart, aes(time, pop, col=animal))+geom_line()
 p1
 
 # lets first see what happens when we start our estimates of stable populations
-
-res = ode(func=lotvmodK, y=currpop, times=days, parms=pars)
+stablepop = c(prey=preyi, pred=predi)
+res = ode(func=lotvmodK, y=stablepop, times=days, parms=pars)
 # estract the results
-ressimple = as.data.frame(res) %>% gather(key="animal", value="pop",-time)
+res_stablestart = as.data.frame(res) %>% gather(key="animal", value="pop",-time)
 # graph both populations over time
-p2=ggplot(ressimple, aes(time, pop, col=animal))+geom_line()
+p2=ggplot(res_stablestart, aes(time, pop, col=animal))+geom_line()
 p2
 
-# of course in this case these are not very realistic populations
+# of course in this case these are not very realistic populations, so it is unlikely that you would get to something stable given parameters - but if they were different you might find a stable and realistic population
+
+# try
 ```
 And just for fun
 
 Lets look at a Lorenz System with its interesting dynamics
-```{r}
+```{r lorenze}
 # lorenze
 source("../R/lorenz.R")
 pars = list(a=10,b=28,c=8/3)
