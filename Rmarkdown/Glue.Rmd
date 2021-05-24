@@ -7,6 +7,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 #library(ecohydroexample)
 library(tidyverse)
+library(Hmisc)
 ```
 
 
@@ -87,7 +88,8 @@ We use the **row** in simstats_acc to find the appropriate modelled streamflow i
 
 accept_cols = simstats_acc$row
 accept_wts = simstats_acc$wt_acc
-aver_flow = apply(simQ[,accept_cols],1, weighted.mean, accept_wts)
+
+aver_flow = as.data.frame(t(simQ[,accept_cols])) %>% map_dbl(weighted.mean,w=accept_wts)
 
 # add some date information or simply add to simQ
 
