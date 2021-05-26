@@ -46,7 +46,7 @@ gmatrix
 ```
 
 Now use the matrix to grow a population 
-```{r}
+```{r siimplegrowth}
 
 # start with an initial population, lets say 1 individual in each class
 
@@ -107,7 +107,7 @@ p12 = 1-79/1000
 p23 = 1-9.8/1000
 p34 = 1-16/1000
 p45 = 1-25/1000
-p56 = 1-48/1000
+p56 = 1-10/1000
 p67 = 1-110/1000
 p78 = 1-270/1000
 p89=1-630/1000
@@ -122,7 +122,7 @@ china_pop=evolve_pop(fert_china, surv_china, ini, ndecades)
 
 head(china_pop)
 
-# graph differnt components of the output
+# graph diffeernt components of the output
 # total population
 
 # add decade 
@@ -237,10 +237,12 @@ F1= 0.0
 F2 = 2.0
 F3 = 0.3
 
-fs1 = cbind.data.frame(f1=rnorm(mean=0, sd=0, n=nsample), f2 = rnorm(mean=2.0, sd=0.1, n=nsample),
+fs1 = cbind.data.frame(f1=rnorm(mean=0, sd=0, n=nsample), 
+                       f2 = rnorm(mean=2.0, sd=0.1, n=nsample),
                        f3 = rnorm(mean=0.3, sd=0.01, n=nsample))
 
-fs2 = cbind.data.frame(f1=rnorm(mean=0, sd=0, n=nsample), f2 = rnorm(mean=2.0, sd=0.1, n=nsample),
+fs2 = cbind.data.frame(f1=rnorm(mean=0, sd=0, n=nsample), 
+                       f2 = rnorm(mean=2.0, sd=0.1, n=nsample),
                        f3 = rnorm(mean=0.3, sd=0.01, n=nsample))
 
 

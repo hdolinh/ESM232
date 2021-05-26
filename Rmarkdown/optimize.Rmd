@@ -49,22 +49,52 @@ result
 
 A more complex example
 
-8888805844
+Lets return to a model of crop yields - we have a new model - in compute_yield that includes the impact of irrigation on yields, given some crop parameters and precipitation and temperature
 
-eclaimsline.com
+**compute_yield**
 
-```{r}
+We also have a model of profit that accounts for price of the crop and costs of irrigation
+
+**compute_profit**
+
+What is the optimal irrigation amount given price of crop and cost of irrigation?
+
+We can use **optimize** here - leave one input "open" - e.g use for upper and lower bounds in the optimation
+We will keep irrigation "open"
+```{r irrigationopt}
+
 source("../R/compute_profit.R")
 source("../R/compute_yield.R")
 source("../R/compute_NPV.R")
 
 crop_pars = c(ts=0.4, tp=0.5, base.yield=500, Topt=25, max.water=800)
 
-optimize(compute_profit, lower=0, upper=400, T=c(20,30,25), P=c(250,144,100), discount=0.01, price=50, cost=150, crop.pars=crop_pars,  maximum=T)
+# lets assume water cost $150 per mm/yr (depth of water per crop area)
+optimize(compute_profit, lower=0, upper=400, T=c(20,30,25), P=c(250,144,100), discount=0.01, price=50, cost=150, crop.pars=crop_pars,  maximum=TRUE)
 
-# cheapter water
-optimize(compute_profit, lower=0, upper=400, T=c(20,30,25), P=c(250,144,100), discount=0.01, price=50, cost=25, crop.pars=crop_pars,  maximum=T)
+
+# try with cheaper water
+optimize(compute_profit, lower=0, upper=400, T=c(20,30,25), P=c(250,144,100), discount=0.01, price=50, cost=25, crop.pars=crop_pars,  maximum=TRUE)
 
 
 ```
 
+You can run your optimization for a range of water prices
+
+```{r optrange}
+
+water_price=seq(from=1, to=50, by=0.5)
+
+# use map to run optimization for different water prices
+# lets also broaden our irrigation range
+result = water_price %>% map_df(~optimize(compute_profit, lower=0, upper=1000, T=c(20,30,25), P=c(250,144,100), discount=0.01, price=50, cost=.x, crop.pars=crop_pars,  maximum=TRUE))
+
+# add water price to result
+result$water_price = water_price
+
+# graph the results
+ggplot(result, aes(water_price, maximum))+geom_point(col="green", size=2)
+ 
+# how could you do this for a range of prices for crops
+
+```

@@ -13,8 +13,8 @@ library(Hmisc)
 
 ```{r setup, echo=FALSE}
 
-load("Data/simQ.rda")
-load("Data/simstats.rda")
+load("../Data/simQ.rda")
+load("../Data/simstats.rda")
 nparm = nrow(simstats) 
 ```
 
@@ -105,18 +105,20 @@ We could plot all behavioral estimates to range given behavior parameters
 Or better, use weights to define upper and lower streamflow quantiles (using **wtd.quantile** from Hmisc package)
 We will need the number from the column name to link with weights
 
-```{r plotting, echo=FALSE}
+```{r plotting}
 
 #all parameters
 a = simQ[,accept_cols]
 b = simQ[,c("date","month","year","day","wy")]
 tmp = as.data.frame(cbind(a,b))
 Q_acc = tmp%>% gather(key="sim",value="Q", -date,-month,-year,-day,-wy)
-ggplot(Q_acc, aes(x=date, y=Q))+geom_line()+theme(legend.position = "none")
+ggplot(subset(Q_acc, wy==1970), aes(x=date, y=Q))+geom_line()+theme(legend.position = "none")
 
 # get quantiles for each day
-accQ_quantile=apply(simQ[,accept_cols],1,"wtd.quantile",weights=accept_wts,prob=c(0.05,0.5, 0.975),normwt=T)
-accQ_quantile=as.data.frame(t(accQ_quantile))
+accQ_quantile=t(simQ[,accept_cols]) %>% map_df(~wtd.quantile(weights=accept_wts,prob=c(0.05,0.5, 0.95),normwt=T, x=.x))
+
+
+accQ_quantile=as.data.frame(accQ_quantile)
 colnames(accQ_quantile)=c("5%","mid", "95%")
 
 accQ_quantile = as.data.frame(cbind(accQ_quantile, simQ[, c("date","month","year","day","wy")]))
@@ -128,3 +130,4 @@ ggplot(accQ_quantilel, aes(x=date, y=Q, col=quant))+geom_line()+labs(y="streamfl
 # just one year
 ggplot(subset(accQ_quantilel, wy==1968), aes(x=date, y=Q, col=quant))+geom_line()+labs(y="streamflow (mm/day)")+scale_colour_discrete(name="prediction quantile")
 
+```

@@ -1,0 +1,264 @@
+---
+title: "predprey
+"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(deSolve)
+library(ggpubr)
+library(tidyverse)
+library(sensitivity)
+library(purrr)
+```
+
+Predictor Prey - 
+
+* Ordinary Differential Equation with two dependent variables
+* Still use **ODE** solve in R
+* use lists to bring in initial conditions for all dependent variables; and outputs derivatives for all dependent variable
+
+
+Preditor and Prey with Carrying Capacity
+
+
+```{r examples}
+
+source("../R/lotvmodK.R")
+
+# initial conditions
+currpop=c(deer=10, pred=1)
+
+# worried that climate change is going to reduce the carrying capacity (how many deer can be supported, because of drought reducing available foliage for them to eat) -and that this might lead to mountain lion extinction -  some estimates suggested that carrying capacity could be reduced by 50%. 
+# this is a challenging problem because there is a lot of uncertainty in how deer/mountain preditor and prey relationships
+# Do an analysis that computes mean and minimum deer and mountain lion populations for two scenarios 1) carrying capacity is between 900-1100 deer and 2) carrying capacity is between 400-600 deer. For both scenarios compute mean and minimum preditor and prey estimates with uncertainty bounds! Plot them together and based on this make an assessment of what you think the risk of mountain lion extintion is
+# Here are parameters
+
+#Inital deer population (mean 300, standard devidation 20)
+#Initial mountain lion population (mean 20, standard deviation 5)
+
+#deer population growth rate (rprey) mean (0.6 standard deviation 0.1)
+#mortality rate of mountain lion (pmort) mean (0.5 standard deviation 0.05)
+#Efficiency mean (0.8, standard deviation 0.2)
+#Alpha mean 0.2 standard deviation 0.05 
+eff=0.8
+alpha = 0.4
+K=100
+pmort=0.3
+rprey=0.04
+
+prey_i = pmort/(eff*alpha)
+pred_i = rprey/alpha * (1-prey_i/K)
+# compute results for the mean
+
+currpop=c(prey=prey_i, pred=pred_i)
+
+currpop = c(prey=800, pred=1)
+pars = c(rprey=rprey, alpha=alpha, eff=eff,pmort=pmort, K=K)
+
+# times when you want to evaluate
+years = seq(from=1,to=5, by=0.1)
+
+# run our differential equation solver
+res = ode(func=lotvmodK, y=currpop, times=years, parms=pars, method="euler")
+
+# estract the results
+ressimple = as.data.frame(res) %>% gather(key="animal", value="pop",-time)
+
+# graph both populations over time
+p1=ggplot(ressimple, aes(time, pop, col=animal))+geom_line()
+p1
+
+# also look at relationships between preditor and prey population and use color for time 
+# I will remove the legend here to make it easier to see 
+p2 = ggplot(as.data.frame(res), aes(pred, prey, col=as.factor(round(time/10))))+geom_point()+theme(legend.position = "none")
+p2
+
+ggarrange(p1,p2)
+
+# try with different parameter sets, can you create one where populations are stable - less cycling?
+
+```
+
+
+# Sensitivity analysis
+
+Consider pred-prey 
+BUT what will be the output - if we want to 'quantify sensitivity'
+useful to look at a single value or set of value
+
+for example
+Max Prey Pop
+Min Prey Pop
+
+
+Remember steps
+
+* Generate parameters (LHS, Sobel)
+* Metrics function
+* Wrapper Function
+* Run wrapper function to get metrics for all paramater sets
+* Graph and compute sensitivity statistics
+
+```{r odesen}
+source("../R/lotvmodK.R")
+library(pse)
+
+# create parameter information as above
+factors = c("rprey","K","alpha","eff","pmort")
+nsets=500
+q = c("qunif","qunif","qunif","qnorm", "qunif","qunif","qunif")
+q.arg = list(list(min=0.01, max=0.3), list(min=10, max=200), list(min=0.1, max=0.4), list(mean=0.3, sd=0.01), list(min=0.05, max=0.45))
+sens_pp = pse::LHS(NULL,factors,nsets,q,q.arg)
+sens_pars = get.data(sens_pp)
+
+
+# lets create a metric and wrapper function as we did for our population models
+
+# first our metrics 
+# lets say we  want the maximum and minimum  of both predictor and prey
+
+compute_metrics = function(result) {
+  maxprey = max(result$prey)
+  maxpred = max(result$pred)
+  minprey = min(result$prey)
+  minpred = min(result$pred)
+return(list(maxprey=maxprey, minprey=minprey, maxpred=maxpred, minpred=minpred))}
+
+# build a wrapper function
+
+
+p_wrapper = function(rprey,alpha, eff, pmort, K, currpop, days, func) {
+    parms = list(rprey=rprey, alpha=alpha, eff=eff, pmort=pmort, K=K)
+    result = ode(y=currpop, times=days, func=func, parms=parms) 
+    colnames(result)=c("time","prey","pred")
+  # get metrics
+  metrics=compute_metrics(as.data.frame(result))
+  return(metrics)
+}
+
+
+# run our model for all parameters and extract the results
+currpop=c(prey=1, pred=1)
+days = seq(from=1,to=500)
+allresults = sens_pars %>% pmap(p_wrapper, currpop=currpop, days=days, func=lotvmodK)
+ 
+# take results back to unlisted form
+allres = allresults %>% map_dfr(`[`,c("maxprey","minprey","maxpred","minpred"))
+
+
+# range of response across parameter uncertainty
+allresl = allres %>% gather(key="metric",value="pop")
+ggplot(allresl, aes(metric, pop))+geom_boxplot()
+
+# dealing with different scales
+ggplot(allresl, aes(metric, pop, col=metric))+geom_boxplot()+facet_wrap(~metric, scales="free")
+
+# send results back to our sensitivity analysis data structure
+sens_pp = pse::tell(sens_pp, t(allres), res.names=c("maxprey", "minprey", "maxpred","minpred"))
+
+# now look at sensitivity
+# cummulative distributions
+pse::plotecdf(sens_pp)
+
+# parameter sensitivity
+plotscatter(sens_pp)
+
+# metrics of sensitivity
+plotprcc(sens_pp)
+sens_pp$prcc
+```
+
+
+
+How do we think about stablity?
+
+Populations don't change when derivatives are zero!
+
+What conditions lead to BOTH derivatives being zero
+
+For lotvmod
+* dprey = rprey*prey -  alpha*prey*pred
+* dpred = eff*alpha*prey*pred - pmort*pred
+
+Make dprey and dpred equal to 0 and rearrange
+* pred_i = rprey/alpha
+* prey_i = pmort/(eff * alpha)
+
+For lotvmodK
+
+* dprey = rprey*(1-prey/K)*prey -  alpha*prey*pred
+* dpred = eff*alpha*prey*pred - pmort*pred
+
+Make dprey and dpred equal to 0 and rearrange
+
+* prey_i = pmort/(eff*alpha)
+* pred_i = rprey/alpha * (1-prey_i/K)
+Try setting you initial conditions close to these values and see what happens
+
+
+```{r stabilitynew}
+
+# set parameter list
+pars = data.frame(rprey=0.1, alpha=0.6, eff=0.8,pmort=0.4, K=20)
+
+# now lets try initial conditions that will be stable
+preyi = with(pars, pmort/(eff*alpha))
+predi = with(pars, rprey/alpha*(1-preyi/K))
+# times when you want to evaluate
+days = seq(from=1,to=500)
+
+# lets first see what happens when we start with 1 of each
+currpop=c(prey=1, pred=1)
+# run our differential equation solver
+res = ode(func=lotvmodK, y=currpop, times=days, parms=pars)
+# extract the results
+res_smallstart = as.data.frame(res) %>% gather(key="animal", value="pop",-time)
+# graph both populations over time
+p1=ggplot(res_smallstart, aes(time, pop, col=animal))+geom_line()
+p1
+
+# lets first see what happens when we start our estimates of stable populations
+stablepop = c(prey=preyi, pred=predi)
+res = ode(func=lotvmodK, y=stablepop, times=days, parms=pars)
+# estract the results
+res_stablestart = as.data.frame(res) %>% gather(key="animal", value="pop",-time)
+# graph both populations over time
+p2=ggplot(res_stablestart, aes(time, pop, col=animal))+geom_line()
+p2
+
+# of course in this case these are not very realistic populations, so it is unlikely that you would get to something stable given parameters - but if they were different you might find a stable and realistic population
+
+# try
+```
+And just for fun
+
+Lets look at a Lorenz System with its interesting dynamics
+```{r lorenze}
+# lorenze
+source("../R/lorenz.R")
+pars = list(a=10,b=28,c=8/3)
+res = ode(func=lorenz, c(x=0.1,y=0,z=0), times=seq(0,50,by=0.01), parms=pars)
+
+ggplot(as.data.frame(res), aes(x,y, col=time))+geom_point()
+ggplot(as.data.frame(res), aes(x,z, col=time))+geom_point()
+ggplot(as.data.frame(res), aes(y,z, col=time))+geom_point()
+
+ressimple = as.data.frame(res) %>% gather(key="var", value="value",-time)
+ggplot(ressimple, aes(time, value, col=var))+geom_line()
+
+# try with different initial conditions
+pars = list(a=15,b=28,c=8/4)
+res = ode(func=lorenz, c(x=0.3,y=5,z=10), times=seq(0,50,by=0.01), parms=pars)
+
+ggplot(as.data.frame(res), aes(x,y, col=time))+geom_point()+scale_colour_gradientn(colours = terrain.colors(10))
+ggplot(as.data.frame(res), aes(x,z, col=time))+geom_point()+scale_colour_gradientn(colours = terrain.colors(10))
+ggplot(as.data.frame(res), aes(y,z, col=time))+geom_point()+scale_colour_gradientn(colours = terrain.colors(10))
+
+ressimple = as.data.frame(res) %>% gather(key="var", value="value",-time)
+ggplot(ressimple, aes(time, value, col=var))+geom_line()
+
+
+```
+
