@@ -6,6 +6,8 @@ output: html_document
 ```{r begin, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(terra)
+library(tidyverse)
+#library(raster)
 ```
 
 ## Spatial Models
@@ -84,13 +86,7 @@ For these models, all issues of parameter sensitivity analysis apply;
 
 
 
-```{r setup}
-library(tidyverse)
-library(terra)
 
-
-
-```
 
 ## Including Plots
 
@@ -116,27 +112,28 @@ slope = terrain(dem, v=c("slope"))
 plot(slope)
 aspect = terrain(dem, v=c("aspect"))
 plot(aspect)
+
+# you can combine maps together
 site = c(dem, slope, aspect, stream)
 plot(site)
 
 summary(site)
 
 # create slope classes
-m <- c(0, 0.01, 1,  0.01, 0.3, 2,  0.3,1, 3)
+# a matrix with 3 columns - range (lowest, highest, newvalue)
+m <- c(0, 5, 1,  6, 15, 2,  15,90, 3)
 rclslope <- matrix(m, ncol=3, byrow=TRUE)
-slope_class = classify(site$slope, rclslope)
+slope_class = classify(site$slope,rcl= rclslope)
 
+summary(slope_class)
 # plot 
 plot(slope_class)
-site = c(site, slope_class)
+site$slope_class = slope_class
+```
 
+now do some modeling
 
-
-# simple calculation with maps
-res$dem100 = round(res$filleddem/100)
-
-# turn a raster stack into a data frame
-res_df=as.data.frame(res)
+```{r mod, echo=FALSE}
 
 # make up some precipitation and temperature data
 # use terrain to scale precipitation and temperature
@@ -144,36 +141,56 @@ res_df=as.data.frame(res)
 base_elev = 300
 precip_base = 750
 k = 0.003
-base_temp = 15
-lapse = -0.006
 
-res_df = res_df %>% mutate(precip = ((filleddem-base_elev)*k+1)*precip_base)
+# scale precipitation - as a function
+scale_pcp = function(precip_base, elev, base_elev, k=0.003) { precip = ((elev-base_elev)*k+1)*precip_base; return(precip)}
 
-res_df = res_df %>% mutate(temp = ((filleddem-base_elev)*lapse + base_temp))
-# now you create models from this
+# we can use app to run a function for all data layers
+site$precip = site$filleddem %>% app(fun=scale_pcp, base_elev=base_elev, precip_base=precip_base)
+
+plot(site$precip)
+
+precip_base = runif(min=200, max=1000, n=4)
+# now we might run over a time series of information
+precip_sp  = precip_base %>% map(~scale_pcp(elev=site$filleddem, base_elev=base_elev, precip_base=.x))
 
 
-# send back to raster object
-# initialize layers
-res$precip = 0
-res$temp = 0
-res
-# add values
-res= setValues(res, res_df$precip, layer=7)
-res= setValues(res, res_df$temp, layer=8)
-
-plot(res$precip, main="Precip (mm/yr)")
 
 # simple functions can also be applied to raster layers in stack
 # imagine a simple model of slope failure vulnerability
 
-failure = function(x,y,z) {
-  a=z*y
-  b= a*(x-300)
-  return(b)}
+estimate_failure_risk = function(precip,precip_thresh = 700, slope_class,soil_erodility=1) {
+  
+  # use precip to determine risk
+  compute_precip_risk = function(precip, precip_thresh) {
+    risk = ifelse(precip < precip_thresh, 0,(precip-precip_thresh)/100)
+    return(risk) }
+  
+  base_risk = precip %>% app(compute_precip_risk, precip_thresh = precip_thresh)
+  # adjust by slope class
+  risk = base_risk * slope_class
+  
+  # adjust by soil erodibility
+  risk = base_risk * soil_erodility
+  
+  return(risk)
+  }
 
-vulner = overlay(res$dem100, res$slope.1, res$precip, fun=failure)
-plot(vulner, main="Stress Model result")
+# try with our first precip map
+risk = estimate_failure_risk(precip=site$precip, slope_class=site$slope_class)
+plot(risk)
+
+# repeat for multiple maps
+
+risk_mprecip  = precip_sp %>% map(~estimate_failure_risk(slope_class=site$slope_class,  precip=.x))
+
+# now this is a list 
+plot(risk_mprecip[[1]])
+
+# you can extract summary information
+results = risk_mprecip %>% map(.f=summary)
+results_mean = results %>% map("[","Mean")
+
 
 ```
 
